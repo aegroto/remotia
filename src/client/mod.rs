@@ -58,7 +58,7 @@ pub struct ClientState {
     pub encoded_frame_buffer: Vec<u8>
 }
 
-pub fn run_with_configuration(mut config: ClientConfiguration) -> Result<(), Box<dyn std::error::Error>> {
+pub async fn run_with_configuration(mut config: ClientConfiguration) -> Result<(), Box<dyn std::error::Error>> {
     let expected_frame_size: usize =
         (config.canvas_width as usize) * (config.canvas_height as usize) * 3;
 
@@ -93,7 +93,7 @@ pub fn run_with_configuration(mut config: ClientConfiguration) -> Result<(), Box
         match receive_frame(
             &mut config,
             &mut state
-        ) {
+        ).await {
             ControlFlow::Continue(frame_stats) => {
                 round_stats.profile_frame(frame_stats);
 

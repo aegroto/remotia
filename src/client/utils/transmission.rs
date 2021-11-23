@@ -5,7 +5,7 @@ use pixels::Pixels;
 
 use crate::client::{ClientConfiguration, ClientState, decode::Decoder, error::ClientError, profiling::ReceivedFrameStats, receive::FrameReceiver, utils::decoding::packed_bgr_to_packed_rgba};
 
-pub fn receive_frame(
+pub async fn receive_frame(
     config: &mut ClientConfiguration,
     state: &mut ClientState
 ) -> ControlFlow<(), ReceivedFrameStats> {
@@ -16,7 +16,7 @@ pub fn receive_frame(
     let reception_start_time = Instant::now();
     let receive_result = config
         .frame_receiver
-        .receive_encoded_frame(&mut state.encoded_frame_buffer);
+        .receive_encoded_frame(&mut state.encoded_frame_buffer).await;
     let reception_time = reception_start_time.elapsed().as_millis();
 
     let decoding_start_time = Instant::now();

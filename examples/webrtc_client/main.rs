@@ -1,25 +1,11 @@
 use std::{net::SocketAddr, str::FromStr};
 
 use clap::Parser;
-use remotia::{
-    client::{run_with_configuration, ClientConfiguration},
-    common::command_line::parse_canvas_resolution_str,
-};
-use utils::setup_frame_receiver_by_name;
-
-use crate::utils::setup_decoder_from_name;
-
-mod utils;
+use remotia::{client::{ClientConfiguration, decode::h264::H264Decoder, receive::webrtc::WebRTCFrameReceiver, run_with_configuration}, common::command_line::parse_canvas_resolution_str};
 
 #[derive(Parser)]
 #[clap(version = "0.1.0", author = "Lorenzo C. <aegroto@protonmail.com>")]
 struct Options {
-    #[clap(short, long, default_value = "h264rgb")]
-    decoder_name: String,
-
-    #[clap(short, long, default_value = "tcp")]
-    frame_receiver_name: String,
-
     #[clap(short, long, default_value = "1280x720")]
     resolution: String,
 
@@ -46,13 +32,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let options = Options::parse();
     let (canvas_width, canvas_height) = parse_canvas_resolution_str(&options.resolution);
 
+    let decoder = Box::new(H264Decoder::new(
+        canvas_width as usize,
+        canvas_height as usize,
+    ));
+
+    let frame_receiver = Box::new(WebRTCFrameReceiver::new().await);
+
     run_with_configuration(ClientConfiguration {
-        decoder: setup_decoder_from_name(canvas_width, canvas_height, &options.decoder_name),
-        frame_receiver: setup_frame_receiver_by_name(
-            SocketAddr::from_str(&options.server_address)?,
-            &options.binding_port,
-            &options.frame_receiver_name,
-        )?,
+        decoder: decoder,
+        frame_receiver: frame_receiver,
         canvas_width: canvas_width,
         canvas_height: canvas_height,
         maximum_consecutive_connection_losses: options.maximum_consecutive_connection_losses,

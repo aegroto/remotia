@@ -1,4 +1,4 @@
-use std::{future::Future, pin::Pin, sync::Arc, time::Duration};
+use std::{future::Future, io::{Read, Write}, net::TcpListener, pin::Pin, sync::Arc, time::Duration};
 
 use async_trait::async_trait;
 
@@ -99,11 +99,21 @@ impl WebRTCFrameSender {
             }))
             .await;
 
+        // Exchange offers
+        let mut offer_buffer: Vec<u8> = vec![0; 2048];
+        let listener = TcpListener::bind("127.0.0.1:5001").unwrap();
+        let (mut stream, _client_address) = listener.accept().unwrap();
+
+        info!("Waiting for client offer...");
+
+        stream.read(&mut offer_buffer).unwrap();
+
         // Wait for the offer to be pasted
-        let b64_browser_description = std::env::var("RDP_SESSION").unwrap();
-        let decoded_b64 = base64::decode(b64_browser_description).unwrap();
-        let browser_description = String::from_utf8(decoded_b64).unwrap();
-        let offer = serde_json::from_str::<RTCSessionDescription>(&browser_description).unwrap();
+        // let b64_offer = std::env::var("RDP_SESSION").unwrap();
+        let b64_offer = String::from_utf8(offer_buffer).unwrap();
+        let decoded_b64_offer = base64::decode(b64_offer).unwrap();
+        let offer_json_str = String::from_utf8(decoded_b64_offer).unwrap();
+        let offer = serde_json::from_str::<RTCSessionDescription>(&offer_json_str).unwrap();
 
         // Set the remote SessionDescription
         peer_connection.set_remote_description(offer).await.unwrap();
@@ -130,7 +140,8 @@ impl WebRTCFrameSender {
         if let Some(local_desc) = peer_connection.local_description().await {
             let json_str = serde_json::to_string(&local_desc).unwrap();
             let base64_descriptor = base64::encode(json_str);
-            println!("{}", base64_descriptor);
+            stream.write_all(base64_descriptor.as_bytes()).unwrap();
+            // println!("{}", base64_descriptor);
         } else {
             println!("generate local_description failed!");
         }

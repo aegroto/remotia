@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{io::Write, net::{SocketAddr, TcpStream}, str::FromStr, sync::Arc};
 
 use crate::client::error::ClientError;
 
@@ -171,9 +171,11 @@ impl WebRTCFrameReceiver {
 
         let offer = peer_connection.create_offer(None).await.unwrap();
         let offer_json = serde_json::to_string::<RTCSessionDescription>(&offer).unwrap();
-        peer_connection.set_remote_description(offer).await.unwrap();
+        peer_connection.set_local_description(offer).await.unwrap();
         let offer_b64 = base64::encode(offer_json);
-        println!("{}", offer_b64);
+
+        let mut stream = TcpStream::connect(SocketAddr::from_str("127.0.0.1:5001").unwrap()).unwrap();
+        stream.write_all(offer_b64.as_bytes()).unwrap();
 
         // Create channel that is blocked until ICE Gathering is complete
         let mut gather_complete = peer_connection.gathering_complete_promise().await;
