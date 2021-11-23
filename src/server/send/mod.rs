@@ -1,8 +1,12 @@
 #![allow(dead_code)]
 
+use async_trait::async_trait;
+
 pub mod udp;
 pub mod tcp;
+pub mod webrtc;
 
+#[async_trait]
 pub trait FrameSender {
-    fn send_frame(&mut self, frame_buffer: &[u8]);
+    async fn send_frame(&mut self, frame_buffer: &[u8]);
 }

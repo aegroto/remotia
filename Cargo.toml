@@ -4,15 +4,6 @@ version = "0.1.0"
 authors = ["Lorenzo Catania <aegroto@protonmail.com>"]
 edition = "2021"
 
-[dependencies.tokio]
-version = '0.2'
-features = [
-    'udp',
-    'sync',
-    'rt-core',
-    'io-util',
-]
-
 [dev-dependencies]
 tokio-openssl = '0.4'
 openssl = { version = "0.10", features = ["vendored"] }
@@ -41,3 +32,9 @@ csv = "1.1.6"
 serde = { version = "1.0.130", features = ["derive"] } 
 chrono = "0.4.19"
 clap = "3.0.0-beta.5"
+webrtc = "0.3.1"
+tokio = "1.14.0"
+bytes = "1.1.0"
+async-trait = "0.1.51"
+serde_json = "1.0.71"
+base64 = "0.13.0"

@@ -33,7 +33,7 @@ pub struct ServerConfiguration {
     pub csv_profiling: bool,
 }
 
-pub fn run_with_configuration(
+pub async fn run_with_configuration(
     mut config: ServerConfiguration,
 ) -> std::io::Result<()> {
     let display = Display::primary().expect("Couldn't find primary display.");
@@ -60,7 +60,7 @@ pub fn run_with_configuration(
             &mut packed_bgr_frame_buffer,
             &mut *config.encoder,
             &mut *config.frame_sender,
-        ) {
+        ).await {
             Ok(frame_stats) => {
                 last_frame_transmission_time = frame_stats.total_time as i64;
                 round_stats.profile_frame(frame_stats);
