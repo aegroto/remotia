@@ -1,10 +1,11 @@
-use std::{io::Write, net::{SocketAddr, TcpStream}, str::FromStr, sync::Arc};
+use std::{io::{Read, Write}, net::{SocketAddr, TcpStream}, str::FromStr, sync::Arc};
 
 use crate::client::error::ClientError;
 
 use super::FrameReceiver;
 
 use async_trait::async_trait;
+use log::info;
 use std::time::Duration;
 use tokio::sync::Notify;
 use webrtc::{
@@ -111,7 +112,7 @@ impl WebRTCFrameReceiver {
                                             pc.write_rtcp(&[Box::new(PictureLossIndication{
                                                 sender_ssrc: 0,
                                                 media_ssrc,
-                                            })]).await;
+                                            })]).await.unwrap();
                                         } else {
                                             break;
                                         }
@@ -175,7 +176,10 @@ impl WebRTCFrameReceiver {
         let offer_b64 = base64::encode(offer_json);
 
         let mut stream = TcpStream::connect(SocketAddr::from_str("127.0.0.1:5001").unwrap()).unwrap();
-        stream.write_all(offer_b64.as_bytes()).unwrap();
+        let offer_b64_bytes = offer_b64.as_bytes();
+        info!("Offer b64 bytes: {}", offer_b64_bytes.len());
+        stream.write_all(offer_b64_bytes).unwrap();
+
 
         // Create channel that is blocked until ICE Gathering is complete
         let mut gather_complete = peer_connection.gathering_complete_promise().await;
@@ -188,14 +192,33 @@ impl WebRTCFrameReceiver {
         // in a production application you should exchange ICE Candidates via OnICECandidate
         let _ = gather_complete.recv().await;
 
+        info!("Waiting for answer...");
+
+        let mut answer_buffer: Vec<u8> = vec![0; 2048 * 12];
+        let read_answer_bytes = stream.read(&mut answer_buffer).unwrap();
+
+        info!("Answer b64 bytes: {}", read_answer_bytes);
+
+        let received_b64_answer_buffer= &answer_buffer[..read_answer_bytes];
+
+        // Wait for the answer to be pasted
+        // let b64_answer = std::env::var("RDP_SESSION").unwrap();
+        let b64_answer = String::from_utf8(received_b64_answer_buffer.to_vec()).unwrap();
+        let decoded_b64_answer = base64::decode(b64_answer).unwrap();
+        let answer_json_str = String::from_utf8(decoded_b64_answer).unwrap();
+        let answer = serde_json::from_str::<RTCSessionDescription>(&answer_json_str).unwrap();
+
+        peer_connection.set_remote_description(answer).await.unwrap();
+
         // Output the answer in base64 so we can paste it in browser
-        if let Some(local_desc) = peer_connection.local_description().await {
+        /*if let Some(local_desc) = peer_connection.local_description().await {
             let json_str = serde_json::to_string(&local_desc).unwrap();
             let b64 = base64::encode(&json_str);
             println!("{}", b64);
         } else {
             println!("generate local_description failed!");
-        }
+        }*/
+
         Self {}
     }
 }

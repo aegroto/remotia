@@ -106,11 +106,14 @@ impl WebRTCFrameSender {
 
         info!("Waiting for client offer...");
 
-        stream.read(&mut offer_buffer).unwrap();
+        let read_bytes = stream.read(&mut offer_buffer).unwrap();
+        info!("Read offer bytes: {}", read_bytes);
+
+        let received_b64_offer_buffer= &offer_buffer[..read_bytes];
 
         // Wait for the offer to be pasted
         // let b64_offer = std::env::var("RDP_SESSION").unwrap();
-        let b64_offer = String::from_utf8(offer_buffer).unwrap();
+        let b64_offer = String::from_utf8(received_b64_offer_buffer.to_vec()).unwrap();
         let decoded_b64_offer = base64::decode(b64_offer).unwrap();
         let offer_json_str = String::from_utf8(decoded_b64_offer).unwrap();
         let offer = serde_json::from_str::<RTCSessionDescription>(&offer_json_str).unwrap();
