@@ -117,6 +117,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "anyhow"
+version = "1.0.48"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "62e1f47f7dc0422027a4e370dd4548d4d66b26782e513e98dca1e689e058a80e"
+
+[[package]]
 name = "arrayvec"
 version = "0.5.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1870,6 +1876,7 @@ checksum = "f497285884f3fcff424ffc933e56d7cbca511def0c9831a7f9b5f6153e3cc89b"
 name = "remotia"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "async-trait",
  "base64",
  "beryllium",
