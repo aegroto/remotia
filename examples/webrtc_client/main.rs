@@ -1,7 +1,14 @@
-use std::{net::SocketAddr, str::FromStr};
+use std::io::Cursor;
 
 use clap::Parser;
-use remotia::{client::{ClientConfiguration, decode::h264::H264Decoder, receive::webrtc::WebRTCFrameReceiver, run_with_configuration}, common::command_line::parse_canvas_resolution_str};
+use remotia::{
+    client::{
+        decode::h264::H264Decoder, receive::webrtc::WebRTCFrameReceiver, run_with_configuration,
+        ClientConfiguration,
+    },
+    common::command_line::parse_canvas_resolution_str,
+};
+use webrtc::media::io::h264_writer::H264Writer;
 
 #[derive(Parser)]
 #[clap(version = "0.1.0", author = "Lorenzo C. <aegroto@protonmail.com>")]
@@ -37,7 +44,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         canvas_height as usize,
     ));
 
-    let frame_receiver = Box::new(WebRTCFrameReceiver::new().await);
+    let frame_receiver = Box::new(
+        WebRTCFrameReceiver::new(canvas_width as usize * canvas_height as usize * 3).await,
+    );
 
     run_with_configuration(ClientConfiguration {
         decoder: decoder,
@@ -47,5 +56,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         maximum_consecutive_connection_losses: options.maximum_consecutive_connection_losses,
         console_profiling: options.console_profiling,
         csv_profiling: options.csv_profiling,
-    }).await
+    })
+    .await
 }

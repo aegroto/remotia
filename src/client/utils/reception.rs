@@ -16,14 +16,17 @@ pub async fn receive_frame(
     let reception_start_time = Instant::now();
     let receive_result = config
         .frame_receiver
-        .receive_encoded_frame(&mut state.encoded_frame_buffer).await;
+        .receive_encoded_frame().await;
     let reception_time = reception_start_time.elapsed().as_millis();
 
     let decoding_start_time = Instant::now();
+    let encoded_frame_buffer = config.frame_receiver.get_encoded_frame_buffer();
+    let unlocked_encoded_frame_buffer = encoded_frame_buffer.lock().unwrap();
+
     let decode_result = receive_result.and_then(|received_data_length| {
         decode_task(
             &mut config.decoder,
-            &mut state.encoded_frame_buffer[..received_data_length],
+            &unlocked_encoded_frame_buffer[..received_data_length],
         )
     });
     let decoding_time = decoding_start_time.elapsed().as_millis();
@@ -71,7 +74,7 @@ fn handle_error(error: ClientError, consecutive_connection_losses: &mut u32) {
 
 fn decode_task(
     decoder: &mut Box<dyn Decoder>,
-    encoded_frame_buffer: &mut [u8],
+    encoded_frame_buffer: &[u8],
 ) -> Result<usize, ClientError> {
     debug!("Decoding {} received bytes", encoded_frame_buffer.len());
     decoder.decode(encoded_frame_buffer)

@@ -1899,6 +1899,7 @@ dependencies = [
  "tokio 1.14.0",
  "tokio-openssl",
  "webrtc",
+ "webrtc-media",
  "zstring",
 ]
 

@@ -1,11 +1,15 @@
+mod h264writer;
+
 use std::{
-    io::{Read, Write},
+    io::{Cursor, Read, Write},
     net::{SocketAddr, TcpStream},
     str::FromStr,
     sync::{Arc, Mutex},
 };
 
 use crate::client::error::ClientError;
+
+use self::h264writer::RemotiaH264Writer;
 
 use super::FrameReceiver;
 
@@ -22,6 +26,7 @@ use webrtc::{
     },
     ice_transport::{ice_connection_state::RTCIceConnectionState, ice_server::RTCIceServer},
     interceptor::registry::Registry,
+    media::io::{h264_writer::H264Writer, Writer},
     peer_connection::{
         configuration::RTCConfiguration, sdp::session_description::RTCSessionDescription,
     },
@@ -43,10 +48,13 @@ struct PacketMessage {
 pub struct WebRTCFrameReceiver {
     // pub packet_buffer: Arc<Mutex<Vec<u8>>>,
     packet_receiver: mpsc::Receiver<PacketMessage>,
+
+    encoded_frame_buffer: Arc<Mutex<Vec<u8>>>,
+    h264_writer: RemotiaH264Writer,
 }
 
 impl WebRTCFrameReceiver {
-    pub async fn new() -> WebRTCFrameReceiver {
+    pub async fn new(encoded_frame_buffer_size: usize) -> WebRTCFrameReceiver {
         // Create a MediaEngine object to configure the supported codec
         let mut m = MediaEngine::default();
 
@@ -114,8 +122,17 @@ impl WebRTCFrameReceiver {
         // let packet_buffer = Arc::new(Mutex::new(vec![0 as u8; 1024]));
         let (packet_sender, packet_receiver) = mpsc::channel(32);
 
+        let encoded_frame_buffer = Arc::new(Mutex::new(vec![0 as u8; encoded_frame_buffer_size]));
+        let writer_encoded_frame_buffer= encoded_frame_buffer.clone();
+
+        let h264_writer = RemotiaH264Writer::new(
+            writer_encoded_frame_buffer,
+        );
+
         let s = Self {
-            packet_receiver: packet_receiver,
+            packet_receiver,
+            encoded_frame_buffer,
+            h264_writer,
         };
 
         let peer_connection_packet_sender = packet_sender.clone();
@@ -276,10 +293,7 @@ impl WebRTCFrameReceiver {
 
 #[async_trait]
 impl FrameReceiver for WebRTCFrameReceiver {
-    async fn receive_encoded_frame(
-        &mut self,
-        frame_buffer: &mut [u8],
-    ) -> Result<usize, ClientError> {
+    async fn receive_encoded_frame(&mut self) -> Result<usize, ClientError> {
         let mut written_bytes = 0;
 
         loop {
@@ -288,12 +302,9 @@ impl FrameReceiver for WebRTCFrameReceiver {
             if let Some(packet_message) = received_message {
                 let packet = packet_message.packet;
 
-                let packet_size = packet.payload.len();
-                let frame_packet_slice =
-                    &mut frame_buffer[written_bytes..written_bytes + packet_size];
-                frame_packet_slice.copy_from_slice(&packet.payload);
+                self.h264_writer.write_rtp(&packet).unwrap();
 
-                written_bytes += packet_size;
+                written_bytes += packet.payload.len();
 
                 if packet.header.marker {
                     break;
@@ -302,5 +313,9 @@ impl FrameReceiver for WebRTCFrameReceiver {
         }
 
         Ok(written_bytes)
+    }
+
+    fn get_encoded_frame_buffer(&self) -> Arc<Mutex<Vec<u8>>> {
+        self.encoded_frame_buffer.clone()
     }
 }

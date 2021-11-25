@@ -162,7 +162,10 @@ impl WebRTCFrameSender {
 #[async_trait]
 impl FrameSender for WebRTCFrameSender {
     async fn send_frame(&mut self, frame_buffer: &[u8]) {
-        let packet_buffer = vec![0; frame_buffer.len()];
+        let mut packet_buffer = vec![0; frame_buffer.len()];
+        packet_buffer.copy_from_slice(frame_buffer);
+
+        println!("Packet buffer head: {:?}", &packet_buffer[0..16]);
 
         let sample = Sample {
             data: Bytes::from(packet_buffer),

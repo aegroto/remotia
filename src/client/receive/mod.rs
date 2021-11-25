@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use std::sync::{Arc, Mutex};
+
 use async_trait::async_trait;
 
 use crate::client::error::ClientError;
@@ -10,5 +12,6 @@ pub mod webrtc;
 
 #[async_trait]
 pub trait FrameReceiver {
-    async fn receive_encoded_frame(&mut self, encoded_frame_buffer: & mut[u8]) -> Result<usize, ClientError>;
+    async fn receive_encoded_frame(&mut self) -> Result<usize, ClientError>;
+    fn get_encoded_frame_buffer(&self) -> Arc<Mutex<Vec<u8>>>;
 }

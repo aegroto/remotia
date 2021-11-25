@@ -58,5 +58,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         maximum_consecutive_connection_losses: options.maximum_consecutive_connection_losses,
         console_profiling: options.console_profiling,
         csv_profiling: options.csv_profiling,
-    }).await
+    }
+    ).await
 }

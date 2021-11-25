@@ -34,7 +34,7 @@ use crate::client::profiling::ReceptionRoundStats;
 use crate::client::profiling::logging::console::ReceptionRoundConsoleLogger;
 use crate::client::profiling::logging::csv::ReceptionRoundCSVLogger;
 use crate::client::utils::profilation::setup_round_stats;
-use crate::client::utils::transmission::receive_frame;
+use crate::client::utils::reception::receive_frame;
 
 use self::decode::Decoder;
 use self::receive::FrameReceiver;
@@ -54,13 +54,14 @@ pub struct ClientConfiguration {
 
 pub struct ClientState {
     pub pixels: Pixels,
-    pub consecutive_connection_losses: u32,
-    pub encoded_frame_buffer: Vec<u8>
+    pub consecutive_connection_losses: u32
 }
 
-pub async fn run_with_configuration(mut config: ClientConfiguration) -> Result<(), Box<dyn std::error::Error>> {
-    let expected_frame_size: usize =
-        (config.canvas_width as usize) * (config.canvas_height as usize) * 3;
+pub async fn run_with_configuration(
+    mut config: ClientConfiguration
+) -> Result<(), Box<dyn std::error::Error>> {
+    /*let expected_frame_size: usize =
+        (config.canvas_width as usize) * (config.canvas_height as usize) * 3;*/
 
     // Init display
     let sdl = SDL::init(InitFlags::default())?;
@@ -78,8 +79,7 @@ pub async fn run_with_configuration(mut config: ClientConfiguration) -> Result<(
             PixelsBuilder::new(config.canvas_width, config.canvas_height, surface_texture)
                 .build()?
         },
-        consecutive_connection_losses: 0,
-        encoded_frame_buffer: vec![0 as u8; expected_frame_size],
+        consecutive_connection_losses: 0
     };
 
     state.pixels.render()?;

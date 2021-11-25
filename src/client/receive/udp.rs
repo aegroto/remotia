@@ -1,4 +1,4 @@
-use std::{net::{SocketAddr, UdpSocket}};
+use std::{net::{SocketAddr, UdpSocket}, sync::{Arc, Mutex}};
 
 use async_trait::async_trait;
 
@@ -10,17 +10,20 @@ use super::FrameReceiver;
 
 pub struct UDPFrameReceiver {
     socket: UdpSocket,
-    server_address: SocketAddr
+    server_address: SocketAddr,
+    encoded_frame_buffer: Arc<Mutex<Vec<u8>>>
 }
 
 impl UDPFrameReceiver {
     pub fn create(
         socket: UdpSocket,
-        server_address: SocketAddr
+        server_address: SocketAddr,
+        encoded_frame_buffer_size: usize
     ) -> Self {
         Self {
-            socket: socket,
-            server_address: server_address
+            socket,
+            server_address,
+            encoded_frame_buffer: Arc::new(Mutex::new(vec![0 as u8; encoded_frame_buffer_size]))
         }
     }
 
@@ -72,8 +75,10 @@ impl UDPFrameReceiver {
         Ok(false)
     }
 
-    fn receive_frame_pixels(&self, frame_buffer: &mut[u8]) -> Result<(), ClientError> {
+    fn receive_frame_pixels(&mut self) -> Result<(), ClientError> {
         debug!("Receiving frame pixels...");
+
+        let mut unlocked_encoded_frame_buffer = self.encoded_frame_buffer.lock().unwrap();
 
         let mut total_received_bytes = 0;
 
@@ -85,7 +90,7 @@ impl UDPFrameReceiver {
                 break;
             }
 
-            let packet_slice = &mut frame_buffer[total_received_bytes..];
+            let packet_slice = &mut unlocked_encoded_frame_buffer[total_received_bytes..];
 
             let received_bytes = match self.socket.recv(packet_slice) {
                 Ok(value) => value,
@@ -114,11 +119,15 @@ impl UDPFrameReceiver {
 
 #[async_trait]
 impl FrameReceiver for UDPFrameReceiver {
-    async fn receive_encoded_frame(&mut self, frame_buffer: &mut[u8]) -> Result<usize, ClientError> {
+    async fn receive_encoded_frame(&mut self) -> Result<usize, ClientError> {
         self.receive_whole_frame_header()?;
         self.send_whole_frame_header_receipt();
-        self.receive_frame_pixels(frame_buffer)?;
+        self.receive_frame_pixels()?;
 
-        Ok(frame_buffer.len())
+        Ok(self.encoded_frame_buffer.lock().unwrap().len())
+    }
+
+    fn get_encoded_frame_buffer(&self)-> Arc<Mutex<Vec<u8>>> {
+        self.encoded_frame_buffer.clone()
     }
 }
