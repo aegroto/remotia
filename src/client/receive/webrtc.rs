@@ -1,13 +1,19 @@
-use std::{io::{Read, Write}, net::{SocketAddr, TcpStream}, str::FromStr, sync::Arc};
+use std::{
+    io::{Read, Write},
+    net::{SocketAddr, TcpStream},
+    str::FromStr,
+    sync::{Arc, Mutex},
+};
 
 use crate::client::error::ClientError;
 
 use super::FrameReceiver;
 
 use async_trait::async_trait;
+use bytes::Bytes;
 use log::info;
 use std::time::Duration;
-use tokio::sync::Notify;
+use tokio::sync::{Notify, mpsc};
 use webrtc::{
     api::{
         interceptor_registry::register_default_interceptors,
@@ -27,12 +33,17 @@ use webrtc::{
     track::track_remote::TrackRemote,
 };
 
+struct PacketMessage {
+    payload: Bytes
+}
+
 pub struct WebRTCFrameReceiver {
-    pub track: Option<Arc<TrackRemote>>
+    // pub packet_buffer: Arc<Mutex<Vec<u8>>>,
+    packet_receiver: mpsc::Receiver<PacketMessage>,
 }
 
 impl WebRTCFrameReceiver {
-    pub async fn new() -> Self {
+    pub async fn new() -> WebRTCFrameReceiver {
         // Create a MediaEngine object to configure the supported codec
         let mut m = MediaEngine::default();
 
@@ -97,59 +108,74 @@ impl WebRTCFrameReceiver {
         // In your application this is where you would handle/process video
         let pc = Arc::downgrade(&peer_connection);
 
-        let mut video_track: Option<Arc<TrackRemote>> = None;
+        // let packet_buffer = Arc::new(Mutex::new(vec![0 as u8; 1024]));
+        let (packet_sender, packet_receiver) = mpsc::channel(32);
 
-        let mut s = Self { 
-            track: None
+        let mut s = Self {
+            packet_receiver: packet_receiver,
         };
 
-        peer_connection.on_track(Box::new(move |track: Option<Arc<TrackRemote>>, _receiver: Option<Arc<RTCRtpReceiver>>| {
-        if let Some(track) = track {
-            // Send a PLI on an interval so that the publisher is pushing a keyframe every rtcpPLIInterval
-            let media_ssrc = track.ssrc();
-            let pc2 = pc.clone();
-            tokio::spawn(async move {
-                let mut result = anyhow::Result::<usize>::Ok(0);
-                while result.is_ok() {
-                    let timeout = tokio::time::sleep(Duration::from_secs(3));
-                    tokio::pin!(timeout);
+        let peer_connection_packet_sender = packet_sender.clone();
 
-                    tokio::select! {
-                        _ = timeout.as_mut() =>{
-                            if let Some(pc) = pc2.upgrade(){
-                                result = pc.write_rtcp(&[Box::new(PictureLossIndication{
-                                    sender_ssrc: 0,
-                                    media_ssrc,
-                                })]).await.map_err(Into::into);
-                            }else {
-                                break;
+        peer_connection
+            .on_track(Box::new(
+                move |track: Option<Arc<TrackRemote>>, _receiver: Option<Arc<RTCRtpReceiver>>| {
+                    if let Some(track) = track {
+                        // Send a PLI on an interval so that the publisher is pushing a keyframe every rtcpPLIInterval
+                        let media_ssrc = track.ssrc();
+                        let pc2 = pc.clone();
+                        tokio::spawn(async move {
+                            let mut result = anyhow::Result::<usize>::Ok(0);
+                            while result.is_ok() {
+                                let timeout = tokio::time::sleep(Duration::from_secs(3));
+                                tokio::pin!(timeout);
+
+                                tokio::select! {
+                                    _ = timeout.as_mut() =>{
+                                        if let Some(pc) = pc2.upgrade(){
+                                            result = pc.write_rtcp(&[Box::new(PictureLossIndication{
+                                                sender_ssrc: 0,
+                                                media_ssrc,
+                                            })]).await.map_err(Into::into);
+                                        }else {
+                                            break;
+                                        }
+                                    }
+                                };
                             }
-                        }
-                    };
-                }
-            });
+                        });
 
-            let notify_rx2 = Arc::clone(&notify_rx);
-            Box::pin(async move {
-                let codec = track.codec().await;
-                let mime_type = codec.capability.mime_type.to_lowercase();
-                if mime_type == MIME_TYPE_H264.to_lowercase() {
-                    println!("Got h264 track, saving to disk as output.h264");
-                     tokio::spawn(async move {
-                        // let _ = save_to_disk(h264_writer2, track, notify_rx2).await;
-                        loop {
-                            let (packet, _attributes) = track.read_rtp().await.unwrap();
-                            println!("Received {} track bytes", packet.payload.len());
-                        }
-                     });
-                }
-            })
-        }else {
-            Box::pin(async {})
-        }
-	})).await;
+                        let notify_rx2 = Arc::clone(&notify_rx);
 
-        let (done_tx, done_rx) = tokio::sync::mpsc::channel::<()>(1);
+                        let track_writer_packet_sender = peer_connection_packet_sender.clone();
+                        Box::pin(async move {
+                            let codec = track.codec().await;
+                            let mime_type = codec.capability.mime_type.to_lowercase();
+                            if mime_type == MIME_TYPE_H264.to_lowercase() {
+                                println!("Got h264 track, saving to disk as output.h264");
+                                tokio::spawn(async move {
+                                    // let _ = save_to_disk(h264_writer2, track, notify_rx2).await;
+                                    loop {
+                                        let (packet, _attributes) = track.read_rtp().await.unwrap();
+
+                                        match track_writer_packet_sender.send(PacketMessage {
+                                            payload: packet.payload
+                                        }).await {
+                                            Ok(_) => (),
+                                            Err(_) => panic!("Unable to send packet message"),
+                                        }
+                                    }
+                                });
+                            }
+                        })
+                    } else {
+                        Box::pin(async {})
+                    }
+                },
+            ))
+            .await;
+
+        let (done_tx, done_rx) = mpsc::channel::<()>(1);
 
         // Set the handler for ICE connection state
         // This will notify you when the peer has connected/disconnected
@@ -185,11 +211,11 @@ impl WebRTCFrameReceiver {
         peer_connection.set_local_description(offer).await.unwrap();
         let offer_b64 = base64::encode(offer_json);
 
-        let mut stream = TcpStream::connect(SocketAddr::from_str("127.0.0.1:5001").unwrap()).unwrap();
+        let mut stream =
+            TcpStream::connect(SocketAddr::from_str("127.0.0.1:5001").unwrap()).unwrap();
         let offer_b64_bytes = offer_b64.as_bytes();
         info!("Offer b64 bytes: {}", offer_b64_bytes.len());
         stream.write_all(offer_b64_bytes).unwrap();
-
 
         // Create channel that is blocked until ICE Gathering is complete
         let mut gather_complete = peer_connection.gathering_complete_promise().await;
@@ -209,7 +235,7 @@ impl WebRTCFrameReceiver {
 
         info!("Answer b64 bytes: {}", read_answer_bytes);
 
-        let received_b64_answer_buffer= &answer_buffer[..read_answer_bytes];
+        let received_b64_answer_buffer = &answer_buffer[..read_answer_bytes];
 
         // Wait for the answer to be pasted
         // let b64_answer = std::env::var("RDP_SESSION").unwrap();
@@ -218,7 +244,10 @@ impl WebRTCFrameReceiver {
         let answer_json_str = String::from_utf8(decoded_b64_answer).unwrap();
         let answer = serde_json::from_str::<RTCSessionDescription>(&answer_json_str).unwrap();
 
-        peer_connection.set_remote_description(answer).await.unwrap();
+        peer_connection
+            .set_remote_description(answer)
+            .await
+            .unwrap();
 
         // Output the answer in base64 so we can paste it in browser
         /*if let Some(local_desc) = peer_connection.local_description().await {
@@ -229,7 +258,7 @@ impl WebRTCFrameReceiver {
             println!("generate local_description failed!");
         }*/
 
-        s 
+        s
     }
 }
 
@@ -239,6 +268,13 @@ impl FrameReceiver for WebRTCFrameReceiver {
         &mut self,
         frame_buffer: &mut [u8],
     ) -> Result<usize, ClientError> {
+        let received_message = self.packet_receiver.recv().await;
+
+        if let Some(packet) = received_message {
+            let frame_packet_slice = &mut frame_buffer[..packet.payload.len()];
+            frame_packet_slice.copy_from_slice(&packet.payload);
+        }
+
         Ok(0)
     }
 }
