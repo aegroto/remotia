@@ -13,7 +13,7 @@ use async_trait::async_trait;
 use bytes::Bytes;
 use log::info;
 use std::time::Duration;
-use tokio::sync::{Notify, mpsc};
+use tokio::sync::{mpsc, Notify};
 use webrtc::{
     api::{
         interceptor_registry::register_default_interceptors,
@@ -26,6 +26,7 @@ use webrtc::{
         configuration::RTCConfiguration, sdp::session_description::RTCSessionDescription,
     },
     rtcp::payload_feedbacks::picture_loss_indication::PictureLossIndication,
+    rtp::packet::Packet,
     rtp_transceiver::{
         rtp_codec::{RTCRtpCodecCapability, RTCRtpCodecParameters, RTPCodecType},
         rtp_receiver::RTCRtpReceiver,
@@ -34,7 +35,9 @@ use webrtc::{
 };
 
 struct PacketMessage {
-    payload: Bytes
+    // payload: Bytes,
+    // marker: bool,
+    packet: Packet,
 }
 
 pub struct WebRTCFrameReceiver {
@@ -101,7 +104,7 @@ impl WebRTCFrameReceiver {
             .unwrap();
 
         let notify_tx = Arc::new(Notify::new());
-        let notify_rx = notify_tx.clone();
+        // let notify_rx = notify_tx.clone();
 
         // Set a handler for when a new remote track starts, this handler saves buffers to disk as
         // an ivf file, since we could have multiple video tracks we provide a counter.
@@ -111,7 +114,7 @@ impl WebRTCFrameReceiver {
         // let packet_buffer = Arc::new(Mutex::new(vec![0 as u8; 1024]));
         let (packet_sender, packet_receiver) = mpsc::channel(32);
 
-        let mut s = Self {
+        let s = Self {
             packet_receiver: packet_receiver,
         };
 
@@ -145,7 +148,7 @@ impl WebRTCFrameReceiver {
                             }
                         });
 
-                        let notify_rx2 = Arc::clone(&notify_rx);
+                        // let notify_rx2 = Arc::clone(&notify_rx);
 
                         let track_writer_packet_sender = peer_connection_packet_sender.clone();
                         Box::pin(async move {
@@ -158,9 +161,16 @@ impl WebRTCFrameReceiver {
                                     loop {
                                         let (packet, _attributes) = track.read_rtp().await.unwrap();
 
-                                        match track_writer_packet_sender.send(PacketMessage {
-                                            payload: packet.payload
-                                        }).await {
+                                        // info!("Packet header: {:?} {}", packet.header, packet.payload.len());
+
+                                        match track_writer_packet_sender
+                                            .send(PacketMessage {
+                                                // payload: packet.payload,
+                                                // marker: packet.header.marker
+                                                packet: packet,
+                                            })
+                                            .await
+                                        {
                                             Ok(_) => (),
                                             Err(_) => panic!("Unable to send packet message"),
                                         }
@@ -175,7 +185,7 @@ impl WebRTCFrameReceiver {
             ))
             .await;
 
-        let (done_tx, done_rx) = mpsc::channel::<()>(1);
+        let (done_tx, _done_rx) = mpsc::channel::<()>(1);
 
         // Set the handler for ICE connection state
         // This will notify you when the peer has connected/disconnected
@@ -186,7 +196,9 @@ impl WebRTCFrameReceiver {
 
                     if connection_state == RTCIceConnectionState::Connected {
                         println!("Ctrl+C the remote client to stop the demo");
-                    } else if connection_state == RTCIceConnectionState::Failed {
+                    } else if connection_state == RTCIceConnectionState::Failed
+                        || connection_state == RTCIceConnectionState::Disconnected
+                    {
                         notify_tx.notify_waiters();
 
                         println!("Done writing media files");
@@ -268,13 +280,27 @@ impl FrameReceiver for WebRTCFrameReceiver {
         &mut self,
         frame_buffer: &mut [u8],
     ) -> Result<usize, ClientError> {
-        let received_message = self.packet_receiver.recv().await;
+        let mut written_bytes = 0;
 
-        if let Some(packet) = received_message {
-            let frame_packet_slice = &mut frame_buffer[..packet.payload.len()];
-            frame_packet_slice.copy_from_slice(&packet.payload);
+        loop {
+            let received_message = self.packet_receiver.recv().await;
+
+            if let Some(packet_message) = received_message {
+                let packet = packet_message.packet;
+
+                let packet_size = packet.payload.len();
+                let frame_packet_slice =
+                    &mut frame_buffer[written_bytes..written_bytes + packet_size];
+                frame_packet_slice.copy_from_slice(&packet.payload);
+
+                written_bytes += packet_size;
+
+                if packet.header.marker {
+                    break;
+                }
+            }
         }
 
-        Ok(0)
+        Ok(written_bytes)
     }
 }

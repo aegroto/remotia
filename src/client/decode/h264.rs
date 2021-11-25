@@ -1,6 +1,6 @@
 use std::slice;
 
-use log::debug;
+use log::{debug, info};
 use rsmpeg::{
     avcodec::{AVCodec, AVCodecContext, AVCodecParserContext, AVPacket},
     error::RsmpegError,
@@ -78,7 +78,13 @@ impl Decoder for H264Decoder {
                 )
                 .unwrap();
 
+            info!("Get packet: {}", get_packet);
+
+            self.parsed_offset += offset;
+
             if get_packet {
+                self.parsed_offset = 0;
+
                 let result = self.decode_context.send_packet(Some(&packet));
 
                 match result {
@@ -117,11 +123,11 @@ impl Decoder for H264Decoder {
                     self.decoded_yuv_to_rgb(y_data, cb_data, cr_data);
                     // self.decoded_frame_buffer.copy_from_slice(yuv_frame_buffer);
                 }
-            } else {
-                break Ok(0);
-            }
 
-            self.parsed_offset += offset;
+                break Ok(0);
+            } /*else {
+                break Ok(0);
+            }*/
         }
     }
 
