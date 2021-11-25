@@ -78,7 +78,7 @@ impl Decoder for H264Decoder {
                 )
                 .unwrap();
 
-            info!("Get packet: {}", get_packet);
+            // info!("Get packet: {}", get_packet);
 
             self.parsed_offset += offset;
 

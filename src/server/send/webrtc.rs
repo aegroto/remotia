@@ -1,14 +1,32 @@
-use std::{future::Future, io::{Read, Write}, net::TcpListener, pin::Pin, sync::Arc, time::Duration};
+use std::{
+    future::Future,
+    io::{Cursor, Read, Write},
+    net::TcpListener,
+    pin::Pin,
+    sync::Arc,
+    time::Duration,
+};
 
 use async_trait::async_trait;
 
 use bytes::Bytes;
 use log::info;
-use webrtc::{api::{
+use webrtc::{
+    api::{
         interceptor_registry::register_default_interceptors,
         media_engine::{MediaEngine, MIME_TYPE_H264},
         APIBuilder,
-    }, ice_transport::{ice_connection_state::RTCIceConnectionState, ice_server::RTCIceServer}, interceptor::registry::Registry, media::Sample, peer_connection::{configuration::RTCConfiguration, peer_connection_state::RTCPeerConnectionState, sdp::session_description::RTCSessionDescription}, rtp_transceiver::rtp_codec::RTCRtpCodecCapability, track::track_local::{track_local_static_sample::TrackLocalStaticSample, TrackLocal}};
+    },
+    ice_transport::{ice_connection_state::RTCIceConnectionState, ice_server::RTCIceServer},
+    interceptor::registry::Registry,
+    media::{io::h264_reader::H264Reader, Sample},
+    peer_connection::{
+        configuration::RTCConfiguration, peer_connection_state::RTCPeerConnectionState,
+        sdp::session_description::RTCSessionDescription,
+    },
+    rtp_transceiver::rtp_codec::RTCRtpCodecCapability,
+    track::track_local::{track_local_static_sample::TrackLocalStaticSample, TrackLocal},
+};
 
 use super::FrameSender;
 
@@ -109,7 +127,7 @@ impl WebRTCFrameSender {
         let read_bytes = stream.read(&mut offer_buffer).unwrap();
         info!("Read offer bytes: {}", read_bytes);
 
-        let received_b64_offer_buffer= &offer_buffer[..read_bytes];
+        let received_b64_offer_buffer = &offer_buffer[..read_bytes];
 
         // Wait for the offer to be pasted
         // let b64_offer = std::env::var("RDP_SESSION").unwrap();
@@ -161,15 +179,29 @@ impl WebRTCFrameSender {
 
 #[async_trait]
 impl FrameSender for WebRTCFrameSender {
-    async fn send_frame(&mut self, frame_buffer: &[u8]) {
-        let packet_buffer = vec![0; frame_buffer.len()];
+    async fn send_frame(&mut self, encoded_frame_buffer: &[u8]) {
+        info!(
+            "Encoded frame buffer head: {:?}",
+            &encoded_frame_buffer[..16]
+        );
 
-        let sample = Sample {
-            data: Bytes::from(packet_buffer),
-            duration: Duration::from_secs(1),
-            ..Default::default()
-        };
+        let mut h264_reader = H264Reader::new(Cursor::new(encoded_frame_buffer));
 
-        self.video_track.write_sample(&sample).await.unwrap();
+        loop {
+            let nal = match h264_reader.next_nal() {
+                Ok(nal) => nal,
+                Err(_) => {
+                    break;
+                }
+            };
+
+            let sample = Sample {
+                data: nal.data.freeze(),
+                duration: Duration::from_secs(1),
+                ..Default::default()
+            };
+
+            self.video_track.write_sample(&sample).await.unwrap();
+        }
     }
 }

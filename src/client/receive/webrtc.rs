@@ -1,9 +1,4 @@
-use std::{
-    io::{Read, Write},
-    net::{SocketAddr, TcpStream},
-    str::FromStr,
-    sync::{Arc, Mutex},
-};
+use std::{io::{Cursor, Read, Write}, net::{SocketAddr, TcpStream}, str::FromStr, sync::{Arc, Mutex}};
 
 use crate::client::error::ClientError;
 
@@ -14,25 +9,16 @@ use bytes::Bytes;
 use log::info;
 use std::time::Duration;
 use tokio::sync::{mpsc, Notify};
-use webrtc::{
-    api::{
+use webrtc::{api::{
         interceptor_registry::register_default_interceptors,
         media_engine::{MediaEngine, MIME_TYPE_H264},
         APIBuilder,
-    },
-    ice_transport::{ice_connection_state::RTCIceConnectionState, ice_server::RTCIceServer},
-    interceptor::registry::Registry,
-    peer_connection::{
+    }, ice_transport::{ice_connection_state::RTCIceConnectionState, ice_server::RTCIceServer}, interceptor::registry::Registry, media::io::{Writer, h264_writer::H264Writer}, peer_connection::{
         configuration::RTCConfiguration, sdp::session_description::RTCSessionDescription,
-    },
-    rtcp::payload_feedbacks::picture_loss_indication::PictureLossIndication,
-    rtp::packet::Packet,
-    rtp_transceiver::{
+    }, rtcp::payload_feedbacks::picture_loss_indication::PictureLossIndication, rtp::packet::Packet, rtp_transceiver::{
         rtp_codec::{RTCRtpCodecCapability, RTCRtpCodecParameters, RTPCodecType},
         rtp_receiver::RTCRtpReceiver,
-    },
-    track::track_remote::TrackRemote,
-};
+    }, track::track_remote::TrackRemote};
 
 struct PacketMessage {
     // payload: Bytes,
@@ -278,9 +264,12 @@ impl WebRTCFrameReceiver {
 impl FrameReceiver for WebRTCFrameReceiver {
     async fn receive_encoded_frame(
         &mut self,
-        frame_buffer: &mut [u8],
+        encoded_frame_buffer: &mut [u8],
     ) -> Result<usize, ClientError> {
-        let mut written_bytes = 0;
+        // let mut cursor = Cursor::new(encoded_frame_buffer);
+
+        let cursor = Cursor::new(encoded_frame_buffer);
+        let mut h264_writer = H264Writer::new(cursor);
 
         loop {
             let received_message = self.packet_receiver.recv().await;
@@ -288,12 +277,7 @@ impl FrameReceiver for WebRTCFrameReceiver {
             if let Some(packet_message) = received_message {
                 let packet = packet_message.packet;
 
-                let packet_size = packet.payload.len();
-                let frame_packet_slice =
-                    &mut frame_buffer[written_bytes..written_bytes + packet_size];
-                frame_packet_slice.copy_from_slice(&packet.payload);
-
-                written_bytes += packet_size;
+                h264_writer.write_rtp(&packet).unwrap();
 
                 if packet.header.marker {
                     break;
@@ -301,6 +285,6 @@ impl FrameReceiver for WebRTCFrameReceiver {
             }
         }
 
-        Ok(written_bytes)
+        Ok(0)
     }
 }
