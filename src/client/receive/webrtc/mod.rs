@@ -1,12 +1,17 @@
+mod h264writer;
+
 use std::{io::{Cursor, Read, Write}, net::{SocketAddr, TcpStream}, str::FromStr, sync::{Arc, Mutex}};
 
 use crate::client::error::ClientError;
 
+use self::h264writer::{RemotiaH264Writer};
+
 use super::FrameReceiver;
 
 use async_trait::async_trait;
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 use log::info;
+use webrtc_media::io::h264_writer;
 use std::time::Duration;
 use tokio::sync::{mpsc, Notify};
 use webrtc::{api::{
@@ -15,7 +20,7 @@ use webrtc::{api::{
         APIBuilder,
     }, ice_transport::{ice_connection_state::RTCIceConnectionState, ice_server::RTCIceServer}, interceptor::registry::Registry, media::io::{Writer, h264_writer::H264Writer}, peer_connection::{
         configuration::RTCConfiguration, sdp::session_description::RTCSessionDescription,
-    }, rtcp::payload_feedbacks::picture_loss_indication::PictureLossIndication, rtp::packet::Packet, rtp_transceiver::{
+    }, rtcp::payload_feedbacks::picture_loss_indication::PictureLossIndication, rtp::{codecs::h264::H264Packet, packet::Packet}, rtp_transceiver::{
         rtp_codec::{RTCRtpCodecCapability, RTCRtpCodecParameters, RTPCodecType},
         rtp_receiver::RTCRtpReceiver,
     }, track::track_remote::TrackRemote};
@@ -27,8 +32,11 @@ struct PacketMessage {
 }
 
 pub struct WebRTCFrameReceiver {
-    // pub packet_buffer: Arc<Mutex<Vec<u8>>>,
     packet_receiver: mpsc::Receiver<PacketMessage>,
+    // h264_writer: RemotiaH264Writer<Cursor<&'a mut[u8]>>
+
+    pub has_key_frame: bool,
+    pub cached_packet: Arc<Mutex<Option<H264Packet>>>,
 }
 
 impl WebRTCFrameReceiver {
@@ -100,8 +108,10 @@ impl WebRTCFrameReceiver {
         // let packet_buffer = Arc::new(Mutex::new(vec![0 as u8; 1024]));
         let (packet_sender, packet_receiver) = mpsc::channel(32);
 
-        let s = Self {
+        let receiver = Self {
             packet_receiver: packet_receiver,
+            has_key_frame: false,
+            cached_packet: Arc::new(Mutex::new(None))
         };
 
         let peer_connection_packet_sender = packet_sender.clone();
@@ -256,7 +266,7 @@ impl WebRTCFrameReceiver {
             println!("generate local_description failed!");
         }*/
 
-        s
+        receiver
     }
 }
 
@@ -264,12 +274,16 @@ impl WebRTCFrameReceiver {
 impl FrameReceiver for WebRTCFrameReceiver {
     async fn receive_encoded_frame(
         &mut self,
-        encoded_frame_buffer: &mut [u8],
+        encoded_frame_buffer: &mut[u8],
     ) -> Result<usize, ClientError> {
         // let mut cursor = Cursor::new(encoded_frame_buffer);
 
         let cursor = Cursor::new(encoded_frame_buffer);
-        let mut h264_writer = H264Writer::new(cursor);
+        let mut h264_writer = RemotiaH264Writer::new();
+        h264_writer.set_writer(cursor);
+
+        h264_writer.has_key_frame = self.has_key_frame;
+        h264_writer.cached_packet = self.cached_packet.clone();
 
         loop {
             let received_message = self.packet_receiver.recv().await;
@@ -285,6 +299,13 @@ impl FrameReceiver for WebRTCFrameReceiver {
             }
         }
 
-        Ok(0)
+        let wrote_bytes = h264_writer.get_writer().as_ref().unwrap().position() as usize;
+
+        h264_writer.close().unwrap();
+
+        self.has_key_frame = h264_writer.has_key_frame;
+        self.cached_packet = h264_writer.cached_packet.clone();
+
+        Ok(wrote_bytes)
     }
 }

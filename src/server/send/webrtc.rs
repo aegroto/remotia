@@ -181,7 +181,8 @@ impl WebRTCFrameSender {
 impl FrameSender for WebRTCFrameSender {
     async fn send_frame(&mut self, encoded_frame_buffer: &[u8]) {
         info!(
-            "Encoded frame buffer head: {:?}",
+            "Encoded frame buffer ({}) head: {:?}",
+            encoded_frame_buffer.len(),
             &encoded_frame_buffer[..16]
         );
 

@@ -1,6 +1,6 @@
 use std::{ops::ControlFlow, time::Instant};
 
-use log::{debug, error, warn};
+use log::{debug, error, info, warn};
 use pixels::Pixels;
 
 use crate::client::{ClientConfiguration, ClientState, decode::Decoder, error::ClientError, profiling::ReceivedFrameStats, receive::FrameReceiver, utils::decoding::packed_bgr_to_packed_rgba};
@@ -74,6 +74,7 @@ fn decode_task(
     encoded_frame_buffer: &mut [u8],
 ) -> Result<usize, ClientError> {
     debug!("Decoding {} received bytes", encoded_frame_buffer.len());
+    info!("Encoded frame buffer ({}) head: {:?}", encoded_frame_buffer.len(), &encoded_frame_buffer[..std::cmp::min(16, encoded_frame_buffer.len())]);
     decoder.decode(encoded_frame_buffer)
 }
 

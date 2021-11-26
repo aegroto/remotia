@@ -1,5 +1,3 @@
-use std::{net::SocketAddr, str::FromStr};
-
 use clap::Parser;
 use remotia::{client::{ClientConfiguration, decode::h264::H264Decoder, receive::webrtc::WebRTCFrameReceiver, run_with_configuration}, common::command_line::parse_canvas_resolution_str};
 
