@@ -74,5 +74,7 @@ pub async fn run_with_configuration(
             }
             Err(e) => error!("Frame transmission error: {}", e),
         };
+
+        // panic!("One frame test");
     }
 }

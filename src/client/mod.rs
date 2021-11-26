@@ -106,6 +106,8 @@ pub async fn run_with_configuration(mut config: ClientConfiguration) -> Result<(
             }
             ControlFlow::Break(_) => break,
         };
+
+        // panic!("One frame test");
     }
 
     Ok(())

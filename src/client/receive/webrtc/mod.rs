@@ -276,8 +276,6 @@ impl FrameReceiver for WebRTCFrameReceiver {
         &mut self,
         encoded_frame_buffer: &mut[u8],
     ) -> Result<usize, ClientError> {
-        // let mut cursor = Cursor::new(encoded_frame_buffer);
-
         let cursor = Cursor::new(encoded_frame_buffer);
         let mut h264_writer = RemotiaH264Writer::new();
         h264_writer.set_writer(cursor);
@@ -293,18 +291,32 @@ impl FrameReceiver for WebRTCFrameReceiver {
 
                 h264_writer.write_rtp(&packet).unwrap();
 
+                info!("Packet header: {:?}", packet.header);
+                info!("Packet payload size: {}", packet.payload.len());
+
+                let wrote_bytes = h264_writer.get_writer().as_ref().unwrap().position() as usize;
+                info!("Wrote {} bytes", wrote_bytes);
+
                 if packet.header.marker {
                     break;
                 }
             }
         }
 
-        let wrote_bytes = h264_writer.get_writer().as_ref().unwrap().position() as usize;
-
         h264_writer.close().unwrap();
+
+        let wrote_bytes = h264_writer.get_writer().as_ref().unwrap().position() as usize;
 
         self.has_key_frame = h264_writer.has_key_frame;
         self.cached_packet = h264_writer.cached_packet.clone();
+
+        let buffer = h264_writer.get_writer().as_ref().unwrap().get_ref();
+
+        info!(
+            "Buffer ({}) head: {:?}",
+            buffer.len(),
+            &buffer[..16]
+        );
 
         Ok(wrote_bytes)
     }

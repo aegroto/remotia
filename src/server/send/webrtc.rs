@@ -188,6 +188,8 @@ impl FrameSender for WebRTCFrameSender {
 
         let mut h264_reader = H264Reader::new(Cursor::new(encoded_frame_buffer));
 
+        let mut total_nal_size = 0;
+
         loop {
             let nal = match h264_reader.next_nal() {
                 Ok(nal) => nal,
@@ -195,6 +197,10 @@ impl FrameSender for WebRTCFrameSender {
                     break;
                 }
             };
+
+            let nal_size = nal.data.len();
+            info!("NAL data size: {}", nal_size);
+            total_nal_size += nal_size;
 
             let sample = Sample {
                 data: nal.data.freeze(),
@@ -204,5 +210,7 @@ impl FrameSender for WebRTCFrameSender {
 
             self.video_track.write_sample(&sample).await.unwrap();
         }
+
+        info!("Total NAL size: {}", total_nal_size);
     }
 }

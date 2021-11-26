@@ -19,7 +19,8 @@ pub struct H264Decoder {
     parsed_offset: usize,
     parser_context: AVCodecParserContext,
 
-    yuv420p_decoder: YUV420PDecoder
+    yuv420p_decoder: YUV420PDecoder,
+    packet: AVPacket
 }
 
 impl H264Decoder {
@@ -40,7 +41,8 @@ impl H264Decoder {
             parsed_offset: 0,
             parser_context: AVCodecParserContext::find(decoder.id).unwrap(),
 
-            yuv420p_decoder: YUV420PDecoder::new(width, height)
+            yuv420p_decoder: YUV420PDecoder::new(width, height),
+            packet: AVPacket::new()
         }
     }
 
@@ -66,69 +68,69 @@ impl H264Decoder {
 
 impl Decoder for H264Decoder {
     fn decode(&mut self, encoded_frame_buffer: &[u8]) -> Result<usize, ClientError> {
-        let mut packet = AVPacket::new();
+        let (get_packet, offset) = self
+            .parser_context
+            .parse_packet(
+                &mut self.decode_context,
+                &mut self.packet,
+                encoded_frame_buffer,
+            )
+            .unwrap();
 
-        loop {
-            let (get_packet, offset) = self
-                .parser_context
-                .parse_packet(
-                    &mut self.decode_context,
-                    &mut packet,
-                    &encoded_frame_buffer[self.parsed_offset..],
-                )
-                .unwrap();
+        info!("Get packet: {}", get_packet);
 
-            // info!("Get packet: {}", get_packet);
+        self.parsed_offset += offset;
 
-            self.parsed_offset += offset;
+        if get_packet {
+            self.parsed_offset = 0;
 
-            if get_packet {
-                self.parsed_offset = 0;
+            info!("Sending packet");
+            let result = self.decode_context.send_packet(Some(&self.packet));
 
-                let result = self.decode_context.send_packet(Some(&packet));
-
-                match result {
-                    Ok(_) => (),
-                    Err(e) => {
-                        debug!("Error on send packet: {}", e);
-                        break Err(ClientError::FFMpegSendPacketError);
-                    }
+            match result {
+                Ok(_) => (),
+                Err(e) => {
+                    debug!("Error on send packet: {}", e);
+                    return Err(ClientError::FFMpegSendPacketError);
                 }
+            }
 
-                loop {
-                    let avframe = match self.decode_context.receive_frame() {
-                        Ok(frame) => frame,
-                        Err(RsmpegError::DecoderDrainError)
-                        | Err(RsmpegError::DecoderFlushedError) => break,
-                        Err(e) => panic!("{:?}", e),
-                    };
+            loop {
+                info!("Receiving frame");
+                let avframe = match self.decode_context.receive_frame() {
+                    Ok(frame) => frame,
+                    Err(RsmpegError::DecoderDrainError)
+                    | Err(RsmpegError::DecoderFlushedError) => {
+                        self.packet = AVPacket::new();
+                        return Ok(0)
+                    },
+                    Err(e) => panic!("{:?}", e),
+                };
 
-                    let data = avframe.data;
-                    let linesize = avframe.linesize;
-                    // let width = avframe.width as usize;
-                    let height = avframe.height as usize;
+                info!("Extracting data");
+                let data = avframe.data;
+                let linesize = avframe.linesize;
+                // let width = avframe.width as usize;
+                let height = avframe.height as usize;
 
-                    let linesize_y = linesize[0] as usize;
-                    let linesize_cb = linesize[1] as usize;
-                    let linesize_cr = linesize[2] as usize;
-                    let y_data =
-                        unsafe { std::slice::from_raw_parts_mut(data[0], height * linesize_y) };
-                    let cb_data = unsafe {
-                        std::slice::from_raw_parts_mut(data[1], height / 2 * linesize_cb)
-                    };
-                    let cr_data = unsafe {
-                        std::slice::from_raw_parts_mut(data[2], height / 2 * linesize_cr)
-                    };
+                let linesize_y = linesize[0] as usize;
+                let linesize_cb = linesize[1] as usize;
+                let linesize_cr = linesize[2] as usize;
+                let y_data =
+                    unsafe { std::slice::from_raw_parts_mut(data[0], height * linesize_y) };
+                let cb_data = unsafe {
+                    std::slice::from_raw_parts_mut(data[1], height / 2 * linesize_cb)
+                };
+                let cr_data = unsafe {
+                    std::slice::from_raw_parts_mut(data[2], height / 2 * linesize_cr)
+                };
 
-                    self.decoded_yuv_to_rgb(y_data, cb_data, cr_data);
-                    // self.decoded_frame_buffer.copy_from_slice(yuv_frame_buffer);
-                }
-
-                break Ok(0);
-            } /*else {
-                break Ok(0);
-            }*/
+                self.decoded_yuv_to_rgb(y_data, cb_data, cr_data);
+                // self.decoded_frame_buffer.copy_from_slice(yuv_frame_buffer);
+            }
         }
+
+        Ok(0)
     }
 
     fn get_decoded_frame(&self) -> &[u8] {
