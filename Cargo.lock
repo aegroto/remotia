@@ -1926,9 +1926,9 @@ dependencies = [
 
 [[package]]
 name = "rsmpeg"
-version = "0.6.0"
+version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aca2781bf19626fa69af166efa35fca09dbf67632306e4130763d2baf62f02b7"
+checksum = "26c6c236f5644317fd75d685f0ebc4b44a1dfbfa31a2d7a018a8f4573d06cc25"
 dependencies = [
  "libc",
  "paste",

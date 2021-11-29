@@ -26,7 +26,7 @@ pixels = "0.7.0"
 zstring = "0.1.2"
 beryllium = { git = "https://github.com/Lokathor/beryllium.git", rev = "9375bbd2dbc8c35d5f669181a9d525315f20ba40", features = ["extern_crate_raw_window_handle"] }
 thiserror = "1.0.30"
-rsmpeg = "0.6.0"
+rsmpeg = "0.7.0"
 cstr = "0.2.9"
 csv = "1.1.6"
 serde = { version = "1.0.130", features = ["derive"] } 

@@ -10,7 +10,7 @@ use super::FrameReceiver;
 
 use async_trait::async_trait;
 use bytes::{Bytes, BytesMut};
-use log::info;
+use log::{debug, info};
 use webrtc_media::io::h264_writer;
 use std::time::Duration;
 use tokio::sync::{mpsc, Notify};
@@ -18,9 +18,7 @@ use webrtc::{api::{
         interceptor_registry::register_default_interceptors,
         media_engine::{MediaEngine, MIME_TYPE_H264},
         APIBuilder,
-    }, ice_transport::{ice_connection_state::RTCIceConnectionState, ice_server::RTCIceServer}, interceptor::registry::Registry, media::io::{Writer, h264_writer::H264Writer}, peer_connection::{
-        configuration::RTCConfiguration, sdp::session_description::RTCSessionDescription,
-    }, rtcp::payload_feedbacks::picture_loss_indication::PictureLossIndication, rtp::{codecs::h264::H264Packet, packet::Packet}, rtp_transceiver::{
+    }, ice_transport::{ice_connection_state::RTCIceConnectionState, ice_server::RTCIceServer}, interceptor::registry::Registry, media::io::{Writer, h264_writer::H264Writer}, peer_connection::{RTCPeerConnection, configuration::RTCConfiguration, sdp::session_description::RTCSessionDescription}, rtcp::payload_feedbacks::picture_loss_indication::PictureLossIndication, rtp::{codecs::h264::H264Packet, packet::Packet}, rtp_transceiver::{
         rtp_codec::{RTCRtpCodecCapability, RTCRtpCodecParameters, RTPCodecType},
         rtp_receiver::RTCRtpReceiver,
     }, track::track_remote::TrackRemote};
@@ -37,6 +35,8 @@ pub struct WebRTCFrameReceiver {
 
     pub has_key_frame: bool,
     pub cached_packet: Arc<Mutex<Option<H264Packet>>>,
+
+    pub peer_connection: Arc<RTCPeerConnection>
 }
 
 impl WebRTCFrameReceiver {
@@ -111,7 +111,8 @@ impl WebRTCFrameReceiver {
         let receiver = Self {
             packet_receiver: packet_receiver,
             has_key_frame: false,
-            cached_packet: Arc::new(Mutex::new(None))
+            cached_packet: Arc::new(Mutex::new(None)),
+            peer_connection: peer_connection.clone()
         };
 
         let peer_connection_packet_sender = packet_sender.clone();
@@ -291,11 +292,11 @@ impl FrameReceiver for WebRTCFrameReceiver {
 
                 h264_writer.write_rtp(&packet).unwrap();
 
-                info!("Packet header: {:?}", packet.header);
-                info!("Packet payload size: {}", packet.payload.len());
+                debug!("Packet header: {:?}", packet.header);
+                debug!("Packet payload size: {}", packet.payload.len());
 
                 let wrote_bytes = h264_writer.get_writer().as_ref().unwrap().position() as usize;
-                info!("Wrote {} bytes", wrote_bytes);
+                debug!("Wrote {} bytes", wrote_bytes);
 
                 if packet.header.marker {
                     break;
@@ -312,7 +313,7 @@ impl FrameReceiver for WebRTCFrameReceiver {
 
         let buffer = h264_writer.get_writer().as_ref().unwrap().get_ref();
 
-        info!(
+        debug!(
             "Buffer ({}) head: {:?}",
             buffer.len(),
             &buffer[..16]

@@ -10,7 +10,7 @@ use std::{
 use async_trait::async_trait;
 
 use bytes::Bytes;
-use log::info;
+use log::{debug, info};
 use webrtc::{
     api::{
         interceptor_registry::register_default_interceptors,
@@ -79,8 +79,15 @@ impl WebRTCFrameSender {
             .unwrap();
 
         tokio::spawn(async move {
-            let mut rtcp_buf = vec![0u8; 1500];
-            while let Ok((_, _)) = rtp_sender.read(&mut rtcp_buf).await {}
+            // let mut rtcp_buf = vec![0u8; 1500];
+            loop {
+                match rtp_sender.read_rtcp().await {
+                    Ok(result) => {
+                        info!("Received RTCP packet: {:?}", result);
+                    },
+                    Err(e) => panic!("RTCP error: {}", e),
+                };
+            }
         });
 
         info!("Printing session info...");
@@ -180,7 +187,7 @@ impl WebRTCFrameSender {
 #[async_trait]
 impl FrameSender for WebRTCFrameSender {
     async fn send_frame(&mut self, encoded_frame_buffer: &[u8]) {
-        info!(
+        debug!(
             "Encoded frame buffer ({}) head: {:?}",
             encoded_frame_buffer.len(),
             &encoded_frame_buffer[..16]
@@ -199,7 +206,7 @@ impl FrameSender for WebRTCFrameSender {
             };
 
             let nal_size = nal.data.len();
-            info!("NAL data size: {}", nal_size);
+            debug!("NAL data size: {}", nal_size);
             total_nal_size += nal_size;
 
             let sample = Sample {
@@ -211,6 +218,6 @@ impl FrameSender for WebRTCFrameSender {
             self.video_track.write_sample(&sample).await.unwrap();
         }
 
-        info!("Total NAL size: {}", total_nal_size);
+        debug!("Total NAL size: {}", total_nal_size);
     }
 }

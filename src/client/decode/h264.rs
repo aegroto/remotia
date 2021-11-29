@@ -1,6 +1,6 @@
 use std::slice;
 
-use log::{debug, info};
+use log::{debug, info, warn};
 use rsmpeg::{
     avcodec::{AVCodec, AVCodecContext, AVCodecParserContext, AVPacket},
     error::RsmpegError,
@@ -90,7 +90,7 @@ impl Decoder for H264Decoder {
             match result {
                 Ok(_) => (),
                 Err(e) => {
-                    debug!("Error on send packet: {}", e);
+                    warn!("Error on send packet: {}", e);
                     return Err(ClientError::FFMpegSendPacketError);
                 }
             }
