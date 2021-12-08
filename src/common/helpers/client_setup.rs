@@ -1,9 +1,16 @@
+use std::str::FromStr;
 use std::{
     net::{SocketAddr, TcpStream, UdpSocket},
     time::Duration,
 };
 
-use crate::client::{decode::{Decoder, h264::H264Decoder, h264rgb::H264RGBDecoder}, receive::{FrameReceiver, srt::SRTFrameReceiver, tcp::TCPFrameReceiver, udp::UDPFrameReceiver}};
+use crate::client::{
+    decode::{h264::H264Decoder, h264rgb::H264RGBDecoder, Decoder},
+    receive::{
+        remvsp::RemVSPFrameReceiver, srt::SRTFrameReceiver, tcp::TCPFrameReceiver,
+        udp::UDPFrameReceiver, FrameReceiver,
+    },
+};
 
 pub fn setup_decoder_from_name(
     _canvas_width: u32,
@@ -54,16 +61,18 @@ pub async fn setup_frame_receiver_by_name(
             let stream = TcpStream::connect(server_address)?;
             Ok(Box::new(TCPFrameReceiver::create(stream)))
         }
-        "srt" => {
-            Ok(Box::new(
-                SRTFrameReceiver::new(
-                    &server_address.to_string(),
-                    Duration::from_millis(10),
-                    Duration::from_millis(50),
-                )
-                .await
-            ))
-        }
+        "srt" => Ok(Box::new(
+            SRTFrameReceiver::new(
+                &server_address.to_string(),
+                Duration::from_millis(10),
+                Duration::from_millis(50),
+            )
+            .await,
+        )),
+        "remvsp" => Ok(Box::new(RemVSPFrameReceiver::connect(
+            i16::from_str(binding_port).unwrap(),
+            server_address,
+        ))),
         _ => panic!("Unknown frame receiver name"),
     }
 }

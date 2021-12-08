@@ -3,7 +3,7 @@ use std::{
     time::Duration,
 };
 
-use crate::server::{encode::{Encoder, ffmpeg::{h264::H264Encoder, h264_vaapi::H264VAAPIEncoder, h264rgb::H264RGBEncoder}, identity::IdentityEncoder}, send::{FrameSender, srt::SRTFrameSender, tcp::TCPFrameSender}};
+use crate::server::{encode::{Encoder, ffmpeg::{h264::H264Encoder, h264_vaapi::H264VAAPIEncoder, h264rgb::H264RGBEncoder}, identity::IdentityEncoder}, send::{FrameSender, remvsp::RemVSPFrameSender, srt::SRTFrameSender, tcp::TCPFrameSender}};
 use log::info;
 
 pub fn setup_encoder_by_name(
@@ -68,6 +68,11 @@ pub async fn setup_frame_sender_by_name(
                     Duration::from_millis(50),
                 )
                 .await,
+            ))
+        },
+        "remvsp" => {
+            Ok(Box::new(
+                RemVSPFrameSender::listen(5001, 256)
             ))
         }
         _ => panic!("Unknown frame sender"),
