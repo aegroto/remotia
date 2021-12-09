@@ -2,7 +2,7 @@
 #![forbid(unsafe_code)]
 
 use pixels::{Error, Pixels, SurfaceTexture};
-use winit::dpi::LogicalSize;
+use winit;
 use winit::event_loop::{EventLoop};
 use winit::window::WindowBuilder;
 
@@ -13,7 +13,7 @@ fn main() -> Result<(), Error> {
     env_logger::init();
     let event_loop = EventLoop::new();
     let window = {
-        let size = LogicalSize::new(WIDTH as f64, HEIGHT as f64);
+        let size = winit::dpi::PhysicalSize::new(WIDTH as f64, HEIGHT as f64);
         WindowBuilder::new()
             .with_title("Hello Pixels")
             .with_inner_size(size)
