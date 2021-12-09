@@ -10,8 +10,6 @@ use std::time::Instant;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
-use beryllium::*;
-
 use chrono::Utc;
 use clap::Parser;
 use log::info;
@@ -19,6 +17,8 @@ use log::{debug, error, warn};
 use pixels::wgpu;
 use pixels::PixelsBuilder;
 use pixels::{wgpu::Surface, Pixels, SurfaceTexture};
+use winit::event_loop::EventLoop;
+use winit::window::WindowBuilder;
 use zstring::zstr;
 
 use crate::client::decode::Decoder;
@@ -50,7 +50,7 @@ pub struct WaterfallClientState {
     pub pixels: Pixels,
     pub consecutive_connection_losses: u32,
     pub encoded_frame_buffer: Vec<u8>,
-    pub raw_frame_buffer: Vec<u8>
+    pub raw_frame_buffer: Vec<u8>,
 }
 
 pub struct WaterfallClientPipeline {
@@ -67,31 +67,25 @@ impl WaterfallClientPipeline {
             (self.config.canvas_width as usize) * (self.config.canvas_height as usize) * 3;
 
         // Init display
-        let sdl = SDL::init(InitFlags::default()).unwrap();
-        let window = sdl
-            .create_raw_window(
-                "Remotia client",
-                WindowPosition::Centered,
-                self.config.canvas_width,
-                self.config.canvas_height,
-                0,
-            )
+        let event_loop = EventLoop::new();
+        let window_size =
+            winit::dpi::PhysicalSize::new(self.config.canvas_width, self.config.canvas_height);
+
+        let window = WindowBuilder::new()
+            .with_title("Remotia client")
+            .with_inner_size(window_size)
+            .with_min_inner_size(window_size)
+            .with_max_inner_size(window_size)
+            .build(&event_loop)
             .unwrap();
 
         let mut state = WaterfallClientState {
             pixels: {
-                let surface_texture = SurfaceTexture::new(
-                    self.config.canvas_width,
-                    self.config.canvas_height,
-                    &window,
-                );
-                PixelsBuilder::new(
-                    self.config.canvas_width,
-                    self.config.canvas_height,
-                    surface_texture,
-                )
-                .build()
-                .unwrap()
+                let window_size = window.inner_size();
+                let surface_texture =
+                    SurfaceTexture::new(window_size.width, window_size.height, &window);
+
+                Pixels::new(window_size.width, window_size.height, surface_texture).unwrap()
             },
             consecutive_connection_losses: 0,
             encoded_frame_buffer: vec![0 as u8; expected_frame_size],
@@ -113,9 +107,7 @@ impl WaterfallClientPipeline {
 
         loop {
             let spin_time = (1000 / std::cmp::max(fps as i64, 1)) - last_frame_dispatching_time;
-            std::thread::sleep(Duration::from_millis(
-                std::cmp::max(0, spin_time) as u64,
-            ));
+            std::thread::sleep(Duration::from_millis(std::cmp::max(0, spin_time) as u64));
 
             let frame_dispatch_start_time = Instant::now();
 
@@ -156,14 +148,13 @@ impl WaterfallClientPipeline {
         let reception_time = reception_start_time.elapsed().as_millis();
 
         let (reception_delay, frame_delay) = if receive_result.is_ok() {
-            let received_frame= receive_result.as_ref().unwrap();
+            let received_frame = receive_result.as_ref().unwrap();
             let capture_timestamp = received_frame.capture_timestamp;
             let frame_delay = SystemTime::now()
-                        .duration_since(UNIX_EPOCH)
-                        .unwrap()
-                        .as_millis()
-                        - capture_timestamp;
-
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis()
+                - capture_timestamp;
 
             (received_frame.reception_delay, frame_delay)
         } else {
@@ -205,7 +196,6 @@ impl WaterfallClientPipeline {
         }
 
         let total_time = total_start_time.elapsed().as_millis();
-
 
         ControlFlow::Continue(ReceivedFrameStats {
             reception_time,
@@ -254,7 +244,7 @@ fn handle_error(error: &ClientError, consecutive_connection_losses: &mut u32) {
 fn decode_task(
     decoder: &mut Box<dyn Decoder>,
     encoded_frame_buffer: &mut [u8],
-    raw_frame_buffer: &mut [u8]
+    raw_frame_buffer: &mut [u8],
 ) -> Result<usize, ClientError> {
     debug!("Decoding {} received bytes", encoded_frame_buffer.len());
     decoder.decode(encoded_frame_buffer, raw_frame_buffer)

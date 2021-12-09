@@ -15,8 +15,6 @@ use std::time::Instant;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
-use beryllium::*;
-
 use bytes::BytesMut;
 use chrono::Utc;
 use clap::Parser;
@@ -26,6 +24,8 @@ use pixels::wgpu;
 use pixels::PixelsBuilder;
 use pixels::{wgpu::Surface, Pixels, SurfaceTexture};
 use tokio::sync::mpsc;
+use winit::event_loop::EventLoop;
+use winit::window::WindowBuilder;
 use zstring::zstr;
 
 use crate::client::decode::Decoder;
@@ -35,8 +35,8 @@ use crate::client::pipeline::silo::decode::DecodeResult;
 use crate::client::pipeline::silo::profile::launch_profile_thread;
 use crate::client::pipeline::silo::receive::launch_receive_thread;
 use crate::client::pipeline::silo::receive::ReceiveResult;
-use crate::client::pipeline::silo::render::RenderResult;
 use crate::client::pipeline::silo::render::launch_render_thread;
+use crate::client::pipeline::silo::render::RenderResult;
 use crate::client::profiling::logging::console::ReceptionRoundConsoleLogger;
 use crate::client::profiling::logging::csv::ReceptionRoundCSVLogger;
 use crate::client::profiling::ReceivedFrameStats;
@@ -44,7 +44,6 @@ use crate::client::profiling::ReceptionRoundStats;
 use crate::client::receive::FrameReceiver;
 use crate::client::utils::decoding::packed_bgr_to_packed_rgba;
 use crate::client::utils::profilation::setup_round_stats;
-
 pub struct SiloClientConfiguration {
     pub decoder: Box<dyn Decoder + Send>,
     pub frame_receiver: Box<dyn FrameReceiver + Send>,
@@ -71,17 +70,6 @@ impl SiloClientPipeline {
 
     pub async fn run(self) {
         // Init display
-        let sdl = SDL::init(InitFlags::default()).unwrap();
-        let window = sdl
-            .create_raw_window(
-                "Remotia client",
-                WindowPosition::Centered,
-                self.config.canvas_width,
-                self.config.canvas_height,
-                0,
-            )
-            .unwrap();
-
         info!("Starting to receive stream...");
 
         const MAXIMUM_ENCODED_FRAME_BUFFERS: usize = 16;
@@ -108,18 +96,6 @@ impl SiloClientPipeline {
             raw_frame_buffers_sender.send(buf).unwrap();
         }
 
-        let pixels = {
-            let surface_texture =
-                SurfaceTexture::new(self.config.canvas_width, self.config.canvas_height, &window);
-            PixelsBuilder::new(
-                self.config.canvas_width,
-                self.config.canvas_height,
-                surface_texture,
-            )
-            .build()
-            .unwrap()
-        };
-
         let (receive_result_sender, receive_result_receiver) =
             mpsc::unbounded_channel::<ReceiveResult>();
         let (decode_result_sender, decode_result_receiver) =
@@ -143,16 +119,17 @@ impl SiloClientPipeline {
 
         let render_handle = launch_render_thread(
             self.config.target_fps,
-            pixels,
+            self.config.canvas_width,
+            self.config.canvas_height,
             raw_frame_buffers_sender,
             decode_result_receiver,
-            render_result_sender
+            render_result_sender,
         );
 
         let profile_handle = launch_profile_thread(
             render_result_receiver,
             self.config.csv_profiling,
-            self.config.console_profiling
+            self.config.console_profiling,
         );
 
         receive_handle.await.unwrap();

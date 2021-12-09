@@ -2,11 +2,12 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 use bytes::BytesMut;
 use log::{debug, info, warn};
-use pixels::Pixels;
+use pixels::{Pixels, PixelsBuilder, SurfaceTexture};
 use tokio::{
     sync::mpsc::{UnboundedReceiver, UnboundedSender},
     task::JoinHandle,
 };
+use winit::{event::Event, event_loop::EventLoop, window::{Window, WindowBuilder}};
 
 use crate::{
     client::{
@@ -24,11 +25,33 @@ pub struct RenderResult {
 
 pub fn launch_render_thread(
     target_fps: u32,
-    mut pixels: Pixels,
+    width: u32,
+    height: u32,
     raw_frame_buffers_sender: UnboundedSender<BytesMut>,
     mut decode_result_receiver: UnboundedReceiver<DecodeResult>,
     render_result_sender: UnboundedSender<RenderResult>,
 ) -> JoinHandle<()> {
+    let event_loop = EventLoop::new();
+    let window_size = winit::dpi::PhysicalSize::new(width, height);
+
+    let window = WindowBuilder::new()
+        .with_title("Remotia client")
+        .with_inner_size(window_size)
+        .build(&event_loop)
+        .unwrap();
+
+    let pixels = {
+        let window_size = window.inner_size();
+        let surface_texture =
+            SurfaceTexture::new(window_size.width, window_size.height, &window);
+
+        Pixels::new(window_size.width, window_size.height, surface_texture).unwrap()
+    };
+    let pixels_update_result = pixels.render();
+    if pixels_update_result.is_err() {
+        panic!("Error");
+    }
+
     tokio::spawn(async move {
         let target_fps = target_fps as f64;
         let mut fps: f64 = recalculate_fps(0.0, target_fps, None);
@@ -36,6 +59,8 @@ pub fn launch_render_thread(
         let mut last_spin_time: u64 = 0;
 
         loop {
+            break;
+
             let frame_dispatch_start_time = Instant::now();
 
             let (decode_result, decode_result_wait_time) =
@@ -49,7 +74,7 @@ pub fn launch_render_thread(
                 let raw_frame_buffer = decode_result.raw_frame_buffer.unwrap();
 
                 let rendering_start_time = Instant::now();
-                packed_bgr_to_packed_rgba(&raw_frame_buffer, pixels.get_frame());
+                // packed_bgr_to_packed_rgba(&raw_frame_buffer, pixels.get_frame());
                 pixels.render().unwrap();
                 let rendering_time = rendering_start_time.elapsed().as_millis();
 
