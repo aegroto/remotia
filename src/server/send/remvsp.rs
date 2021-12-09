@@ -64,6 +64,7 @@ impl FrameSender for RemVSPFrameSender {
         let frame_header = RemVSPFrameHeader {
             frame_id: self.state.last_frame_id,
             frame_fragments_count: chunks.len() as u16,
+            fragment_size: self.chunk_size as u16,
             capture_timestamp,
         };
 

@@ -38,17 +38,40 @@ impl FrameReconstructionState {
     }
 
     pub fn register_fragment(&mut self, fragment: RemVSPFrameFragment) {
+        if self.frame_header.is_none() {
+            self.frame_header = Some(fragment.frame_header);
+        }
+
         self.received_fragments
             .insert(fragment.fragment_id, fragment.data);
     }
 
     pub fn is_complete(&self) -> bool {
         if self.frame_header.is_some() {
-            return self.received_fragments.len() as u16
-                == self.frame_header.unwrap().frame_fragments_count;
+            let received_fragments = self.received_fragments.len() as u16;
+            let frame_fragments = self.frame_header.unwrap().frame_fragments_count;
+
+            return received_fragments == frame_fragments;
         }
 
         return false;
+    }
+
+    pub fn decant(self, buffer: &mut [u8]) {
+        let fragment_size = self
+            .frame_header
+            .expect("None header while decanting")
+            .fragment_size as usize;
+
+        for (fragment_id, data) in self.received_fragments.into_iter() {
+            let fragment_id = fragment_id as usize;
+            let fragment_offset = (fragment_id * fragment_size) as usize;
+
+            let fragment_buffer = 
+                &mut buffer[fragment_offset..fragment_offset + fragment_size];
+
+            fragment_buffer.copy_from_slice(&data);
+        }
     }
 }
 
@@ -99,7 +122,11 @@ impl RemVSPFrameReceiver {
     }
 
     fn is_frame_complete(&self, frame_id: usize) -> bool {
-        self.state.frames_in_reception.get(&frame_id).unwrap().is_complete()
+        self.state
+            .frames_in_reception
+            .get(&frame_id)
+            .unwrap()
+            .is_complete()
     }
 }
 
