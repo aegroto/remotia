@@ -57,13 +57,9 @@ impl FrameReconstructionState {
         return false;
     }
 
-    pub fn decant(self, buffer: &mut [u8]) {
-        let fragment_size = self
-            .frame_header
-            .expect("None header while decanting")
-            .fragment_size as usize;
-
+    pub fn reconstruct(self, buffer: &mut [u8]) {
         for (fragment_id, data) in self.received_fragments.into_iter() {
+            let fragment_size = data.len();
             let fragment_id = fragment_id as usize;
             let fragment_offset = (fragment_id * fragment_size) as usize;
 
@@ -125,8 +121,16 @@ impl RemVSPFrameReceiver {
         self.state
             .frames_in_reception
             .get(&frame_id)
-            .unwrap()
+            .expect("Retrieving a non-existing frame")
             .is_complete()
+    }
+
+    fn reconstruct_frame(&mut self, frame_id: usize, output_buffer: &mut [u8]) {
+        self.state
+            .frames_in_reception
+            .remove(&frame_id)
+            .expect("Retrieving a non-existing frame")
+            .reconstruct(output_buffer);
     }
 }
 
@@ -155,6 +159,7 @@ impl FrameReceiver for RemVSPFrameReceiver {
 
             if self.is_frame_complete(frame_id) {
                 debug!("Frame #{} completely received, reconstructing...", frame_id);
+                self.reconstruct_frame(frame_id, encoded_frame_buffer);
                 break;
             }
         }
