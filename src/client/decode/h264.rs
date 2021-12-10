@@ -74,8 +74,6 @@ impl Decoder for H264Decoder {
                 )
                 .unwrap();
 
-            debug!("Get packet: {}", get_packet);
-
             if get_packet {
                 let result = self.decode_context.send_packet(Some(&packet));
 

@@ -62,8 +62,6 @@ pub fn launch_receive_thread(
                 None
             };
 
-            info!("Sending receive result...");
-
             let send_result = receive_result_sender.send(ReceiveResult {
                 received_frame,
                 encoded_frame_buffer,

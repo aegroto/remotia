@@ -1,3 +1,6 @@
+#[cfg(test)]
+mod tests;
+
 use std::{
     collections::HashMap,
     net::{SocketAddr},
@@ -62,17 +65,21 @@ impl FrameReconstructionState {
     pub fn reconstruct(self, buffer: &mut [u8]) -> usize {
         let mut written_bytes = 0;
 
+        let frame_header = self.frame_header.expect("Reconstructing without a frame header");
+
+        let fragment_size = frame_header.fragment_size as usize;
+
         for (fragment_id, data) in self.received_fragments.into_iter() {
-            let fragment_size = data.len();
+            let current_fragment_data_size = data.len();
             let fragment_id = fragment_id as usize;
             let fragment_offset = (fragment_id * fragment_size) as usize;
 
             let fragment_buffer = 
-                &mut buffer[fragment_offset..fragment_offset + fragment_size];
+                &mut buffer[fragment_offset..fragment_offset + current_fragment_data_size];
 
             fragment_buffer.copy_from_slice(&data);
 
-            written_bytes += fragment_size;
+            written_bytes += current_fragment_data_size;
         }
 
         written_bytes
@@ -120,7 +127,6 @@ impl RemVSPFrameReceiver {
         if frame_reconstruction_state.has_received_fragment(&fragment) {
             debug!("Duplicate fragment, dropping");
         } else {
-            debug!("Registering new fragment");
             frame_reconstruction_state.register_fragment(fragment);
         }
     }
@@ -179,13 +185,13 @@ impl FrameReceiver for RemVSPFrameReceiver {
             self.register_frame_fragment(frame_fragment);
 
             if self.is_frame_complete(frame_id) {
+                debug!("Frame #{} has been received completely", frame_id);
                 if self.is_frame_stale(frame_id) {
-                    debug!("Frame #{} is stale, dropping...", frame_id);
+                    debug!("Frame is stale, dropping...");
                     self.drop_frame_data(frame_id);
                     continue
                 }
 
-                debug!(" //////// Frame #{} completely received, reconstructing...", frame_id);
                 let buffer_size = self.reconstruct_frame(frame_id, encoded_frame_buffer);
 
                 break Ok(ReceivedFrame {
@@ -195,8 +201,6 @@ impl FrameReceiver for RemVSPFrameReceiver {
                 })
             }
         };
-
-        debug!(" ############## Finished receiving");
 
         result
     }
