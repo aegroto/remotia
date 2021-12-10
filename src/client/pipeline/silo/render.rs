@@ -44,20 +44,13 @@ pub fn launch_render_thread(
                     .expect("Decode channel has been closed, terminating");
 
             let mut frame_stats = decode_result.frame_stats;
+            let raw_frame_buffer = decode_result.raw_frame_buffer.unwrap();
 
             if frame_stats.error.is_none() {
-                let raw_frame_buffer = decode_result.raw_frame_buffer.unwrap();
-
                 let rendering_start_time = Instant::now();
                 packed_bgr_to_packed_rgba(&raw_frame_buffer, pixels.get_frame());
                 pixels.render().unwrap();
                 let rendering_time = rendering_start_time.elapsed().as_millis();
-
-                let buffer_return_result = raw_frame_buffers_sender.send(raw_frame_buffer);
-                if let Err(e) = buffer_return_result {
-                    warn!("Raw frame buffer return error: {}", e);
-                    break;
-                };
 
                 let frame_delay = {
                     let capture_timestamp = frame_stats.capture_timestamp;
@@ -75,6 +68,12 @@ pub fn launch_render_thread(
                 frame_stats.renderer_idle_time = decode_result_wait_time;
                 frame_stats.spin_time = last_spin_time;
             }
+
+            let buffer_return_result = raw_frame_buffers_sender.send(raw_frame_buffer);
+            if let Err(e) = buffer_return_result {
+                warn!("Raw frame buffer return error: {}", e);
+                break;
+            };
 
             fps = recalculate_fps(fps, target_fps, frame_stats.error.as_ref());
 

@@ -35,9 +35,9 @@ impl RemVSPFrameSender {
         assert_eq!(bytes_received, 16);
 
         info!("Hello message received correctly. Streaming...");
-        socket
+        /*socket
             .set_read_timeout(Some(Duration::from_millis(200)))
-            .unwrap();
+            .unwrap();*/
 
         socket.connect(client_address).unwrap();
 
@@ -79,8 +79,8 @@ impl FrameSender for RemVSPFrameSender {
 
             self.socket.send(&bin_fragment).unwrap();
 
-            info!(
-                "Received frame fragment #{}: {:?}",
+            debug!(
+                "Sent frame fragment #{}: {:?}",
                 frame_fragment.fragment_id, frame_fragment.frame_header
             );
         }
