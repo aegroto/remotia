@@ -72,7 +72,7 @@ pub async fn setup_frame_receiver_by_name(
         "remvsp" => Ok(Box::new(RemVSPFrameReceiver::connect(
             i16::from_str(binding_port).unwrap(),
             server_address,
-        ))),
+        ).await)),
         _ => panic!("Unknown frame receiver name"),
     }
 }

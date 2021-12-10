@@ -1,7 +1,7 @@
 use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use bytes::BytesMut;
-use log::{debug, warn};
+use log::{debug, info, warn};
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
 
@@ -62,6 +62,8 @@ pub fn launch_receive_thread(
                 None
             };
 
+            info!("Sending receive result...");
+
             let send_result = receive_result_sender.send(ReceiveResult {
                 received_frame,
                 encoded_frame_buffer,
@@ -69,7 +71,7 @@ pub fn launch_receive_thread(
             });
 
             if let Err(e) = send_result {
-                warn!("Capture result send error: {}", e);
+                warn!("Receive result send error: {}", e);
                 break;
             };
         }

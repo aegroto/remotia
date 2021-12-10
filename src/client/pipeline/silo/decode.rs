@@ -39,6 +39,8 @@ pub fn launch_decode_thread(
 
             debug!("Waiting for raw frame buffer...");
             let raw_frame_buffer = if frame_stats.error.is_none() {
+                debug!("Pulling raw frame buffer...");
+
                 let (mut raw_frame_buffer, raw_frame_buffer_wait_time) =
                     channel_pull(&mut raw_frame_buffers_receiver)
                         .await

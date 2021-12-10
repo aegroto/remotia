@@ -1,12 +1,13 @@
 use std::{
     collections::HashMap,
-    net::{SocketAddr, UdpSocket},
+    net::{SocketAddr},
     time::Duration,
 };
 
 use async_trait::async_trait;
 
 use log::{debug, info};
+use tokio::net::UdpSocket;
 
 use crate::{
     client::error::ClientError,
@@ -79,21 +80,21 @@ impl FrameReconstructionState {
 }
 
 impl RemVSPFrameReceiver {
-    pub fn connect(port: i16, server_address: SocketAddr) -> Self {
+    pub async fn connect(port: i16, server_address: SocketAddr) -> Self {
         let binding_address = format!("127.0.0.1:{}", port);
 
-        let socket = UdpSocket::bind(binding_address).unwrap();
-        /*socket
-            .set_read_timeout(Some(Duration::from_millis(500)))
-            .unwrap();*/
+        let socket = UdpSocket::bind(binding_address).await.unwrap();
 
         let hello_buffer = [0; 16];
-        socket.send_to(&hello_buffer, server_address).unwrap();
+        socket.send_to(&hello_buffer, server_address).await.unwrap();
 
         Self {
             socket,
             server_address,
-            state: RemVSPReceptionState::default(),
+            state: RemVSPReceptionState {
+                last_reconstructed_frame: 0,
+                ..Default::default()
+            },
         }
     }
 
@@ -161,8 +162,8 @@ impl FrameReceiver for RemVSPFrameReceiver {
     ) -> Result<ReceivedFrame, ClientError> {
         let mut bin_fragment_buffer = vec![0 as u8; 1024];
 
-        loop {
-            let received_bytes = self.socket.recv(&mut bin_fragment_buffer).unwrap();
+        let result = loop {
+            let received_bytes = self.socket.recv(&mut bin_fragment_buffer).await.unwrap();
 
             let frame_fragment =
                 bincode::deserialize::<RemVSPFrameFragment>(&bin_fragment_buffer[..received_bytes])
@@ -184,7 +185,7 @@ impl FrameReceiver for RemVSPFrameReceiver {
                     continue
                 }
 
-                debug!("Frame #{} completely received, reconstructing...", frame_id);
+                debug!(" //////// Frame #{} completely received, reconstructing...", frame_id);
                 let buffer_size = self.reconstruct_frame(frame_id, encoded_frame_buffer);
 
                 break Ok(ReceivedFrame {
@@ -193,6 +194,10 @@ impl FrameReceiver for RemVSPFrameReceiver {
                     reception_delay: 0,
                 })
             }
-        }
+        };
+
+        debug!(" ############## Finished receiving");
+
+        result
     }
 }

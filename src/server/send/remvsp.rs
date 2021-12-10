@@ -35,9 +35,9 @@ impl RemVSPFrameSender {
         assert_eq!(bytes_received, 16);
 
         info!("Hello message received correctly. Streaming...");
-        /*socket
-            .set_read_timeout(Some(Duration::from_millis(200)))
-            .unwrap();*/
+        socket
+            .set_read_timeout(Some(Duration::from_millis(3000)))
+            .unwrap();
 
         socket.connect(client_address).unwrap();
 
@@ -46,14 +46,16 @@ impl RemVSPFrameSender {
             chunk_size,
             client_address,
 
-            state: RemVSPTransmissionState::default(),
+            state: RemVSPTransmissionState {
+                current_frame_id: 1,
+            },
         }
     }
 }
 
 #[derive(Default)]
 struct RemVSPTransmissionState {
-    pub last_frame_id: usize,
+    pub current_frame_id: usize,
 }
 
 #[async_trait]
@@ -62,7 +64,7 @@ impl FrameSender for RemVSPFrameSender {
         let chunks = frame_buffer.chunks(self.chunk_size);
 
         let frame_header = RemVSPFrameHeader {
-            frame_id: self.state.last_frame_id,
+            frame_id: self.state.current_frame_id,
             frame_fragments_count: chunks.len() as u16,
             fragment_size: self.chunk_size as u16,
             capture_timestamp,
@@ -85,7 +87,7 @@ impl FrameSender for RemVSPFrameSender {
             );
         }
 
-        self.state.last_frame_id += 1;
+        self.state.current_frame_id += 1;
 
         // panic!("One frame test");
     }
