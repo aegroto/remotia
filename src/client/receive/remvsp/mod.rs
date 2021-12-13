@@ -207,9 +207,13 @@ impl FrameReceiver for RemVSPFrameReceiver {
             self.register_frame_fragment(frame_fragment);
 
             if self.is_frame_complete(frame_id) {
-                debug!("Frame #{} has been received completely", frame_id);
+                info!(
+                    "Frame #{} has been received completely. Last received frame: {}",
+                    frame_id, self.state.last_reconstructed_frame
+                );
+
                 if self.is_frame_stale(frame_id) {
-                    debug!("Frame is stale, dropping...");
+                    info!("Frame is stale, dropping...");
                     self.drop_frame_data(frame_id);
                     continue;
                 }
