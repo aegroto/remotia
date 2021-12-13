@@ -38,6 +38,7 @@ pub fn launch_render_thread(
         loop {
             let frame_dispatch_start_time = Instant::now();
 
+            debug!("Waiting for the decode result...");
             let (decode_result, decode_result_wait_time) =
                 channel_pull(&mut decode_result_receiver)
                     .await
@@ -47,6 +48,7 @@ pub fn launch_render_thread(
             let raw_frame_buffer = decode_result.raw_frame_buffer.unwrap();
 
             if frame_stats.error.is_none() {
+                debug!("Rendering the frame...");
                 let rendering_start_time = Instant::now();
                 packed_bgr_to_packed_rgba(&raw_frame_buffer, pixels.get_frame());
                 pixels.render().unwrap();
@@ -69,6 +71,7 @@ pub fn launch_render_thread(
                 frame_stats.spin_time = last_spin_time;
             }
 
+            debug!("Returning the raw frame buffer back...");
             let buffer_return_result = raw_frame_buffers_sender.send(raw_frame_buffer);
             if let Err(e) = buffer_return_result {
                 warn!("Raw frame buffer return error: {}", e);

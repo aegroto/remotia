@@ -1,15 +1,12 @@
 #[cfg(test)]
 mod tests;
 
-use std::{
-    collections::HashMap,
-    net::{SocketAddr},
-    time::Duration,
-};
+use std::{collections::HashMap, fmt::Debug, net::SocketAddr, time::Duration};
 
 use async_trait::async_trait;
 
 use log::{debug, info};
+use socket2::{Domain, Socket, Type};
 use tokio::net::UdpSocket;
 
 use crate::{
@@ -25,7 +22,7 @@ pub struct RemVSPFrameReceiver {
     state: RemVSPReceptionState,
 }
 
-#[derive(Default)]
+#[derive(Default, Debug)]
 struct RemVSPReceptionState {
     last_reconstructed_frame: usize,
     frames_in_reception: HashMap<usize, FrameReconstructionState>,
@@ -35,6 +32,21 @@ struct RemVSPReceptionState {
 struct FrameReconstructionState {
     frame_header: Option<RemVSPFrameHeader>,
     received_fragments: HashMap<u16, Vec<u8>>,
+}
+
+impl Debug for FrameReconstructionState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let received_fragments_resume = format!(
+            "{}/{}",
+            self.received_fragments.len(),
+            self.frame_header.unwrap().frame_fragments_count
+        );
+
+        f.debug_struct("FrameReconstructionState")
+            .field("frame_header", &self.frame_header)
+            .field("received_fragments", &received_fragments_resume)
+            .finish()
+    }
 }
 
 impl FrameReconstructionState {
@@ -65,7 +77,9 @@ impl FrameReconstructionState {
     pub fn reconstruct(self, buffer: &mut [u8]) -> usize {
         let mut written_bytes = 0;
 
-        let frame_header = self.frame_header.expect("Reconstructing without a frame header");
+        let frame_header = self
+            .frame_header
+            .expect("Reconstructing without a frame header");
 
         let fragment_size = frame_header.fragment_size as usize;
 
@@ -74,7 +88,7 @@ impl FrameReconstructionState {
             let fragment_id = fragment_id as usize;
             let fragment_offset = (fragment_id * fragment_size) as usize;
 
-            let fragment_buffer = 
+            let fragment_buffer =
                 &mut buffer[fragment_offset..fragment_offset + current_fragment_data_size];
 
             fragment_buffer.copy_from_slice(&data);
@@ -88,9 +102,16 @@ impl FrameReconstructionState {
 
 impl RemVSPFrameReceiver {
     pub async fn connect(port: i16, server_address: SocketAddr) -> Self {
-        let binding_address = format!("127.0.0.1:{}", port);
+        let bind_address: SocketAddr = format!("127.0.0.1:{}", port).parse().unwrap();
+        let bind_address = bind_address.into();
 
-        let socket = UdpSocket::bind(binding_address).await.unwrap();
+        let raw_socket = Socket::new(Domain::IPV4, Type::DGRAM, None).unwrap();
+        raw_socket.set_nonblocking(true).unwrap();
+        raw_socket.set_recv_buffer_size(256 * 1024 * 1024).unwrap();
+        raw_socket.bind(&bind_address).unwrap();
+
+        let udp_socket: std::net::UdpSocket = raw_socket.into();
+        let socket = UdpSocket::from_std(udp_socket).unwrap();
 
         let hello_buffer = [0; 16];
         socket.send_to(&hello_buffer, server_address).await.unwrap();
@@ -111,13 +132,13 @@ impl RemVSPFrameReceiver {
         let frame_reconstruction_state = {
             let frames_in_reception = &mut self.state.frames_in_reception;
 
-            let frame_reception_state = frames_in_reception.get_mut(&frame_id);
+            let frame_reconstruction_state = frames_in_reception.get_mut(&frame_id);
 
-            if frame_reception_state.is_some() {
+            if frame_reconstruction_state.is_some() {
                 debug!(
                     "Frame has already been partially received, updating the reconstruction state"
                 );
-                frame_reception_state.unwrap()
+                frame_reconstruction_state.unwrap()
             } else {
                 frames_in_reception.insert(frame_id, FrameReconstructionState::default());
                 frames_in_reception.get_mut(&frame_id).unwrap()
@@ -138,7 +159,7 @@ impl RemVSPFrameReceiver {
             .expect("Retrieving a non-existing frame")
             .is_complete()
     }
-    
+
     fn is_frame_stale(&self, frame_id: usize) -> bool {
         frame_id <= self.state.last_reconstructed_frame
     }
@@ -148,7 +169,8 @@ impl RemVSPFrameReceiver {
     }
 
     fn reconstruct_frame(&mut self, frame_id: usize, output_buffer: &mut [u8]) -> usize {
-        let frame_size = self.state
+        let frame_size = self
+            .state
             .frames_in_reception
             .remove(&frame_id)
             .expect("Retrieving a non-existing frame")
@@ -189,8 +211,10 @@ impl FrameReceiver for RemVSPFrameReceiver {
                 if self.is_frame_stale(frame_id) {
                     debug!("Frame is stale, dropping...");
                     self.drop_frame_data(frame_id);
-                    continue
+                    continue;
                 }
+
+                debug!("Frames reception state: {:#?}", self.state);
 
                 let buffer_size = self.reconstruct_frame(frame_id, encoded_frame_buffer);
 
@@ -198,7 +222,7 @@ impl FrameReceiver for RemVSPFrameReceiver {
                     buffer_size,
                     capture_timestamp: frame_header.capture_timestamp,
                     reception_delay: 0,
-                })
+                });
             }
         };
 

@@ -7,6 +7,7 @@ use std::{
 use async_trait::async_trait;
 
 use log::{debug, info};
+use socket2::{Domain, Socket, Type};
 
 use crate::common::network::remvsp::{RemVSPFrameFragment, RemVSPFrameHeader};
 
@@ -22,11 +23,17 @@ pub struct RemVSPFrameSender {
 
 impl RemVSPFrameSender {
     pub fn listen(port: i16, chunk_size: usize) -> Self {
-        let bind_address = format!("127.0.0.1:{}", port);
-        let socket = UdpSocket::bind(bind_address.as_str()).unwrap();
+        let bind_address: SocketAddr = format!("127.0.0.1:{}", port).parse().unwrap();
+        let bind_address = bind_address.into();
+
+        let raw_socket = Socket::new(Domain::IPV4, Type::DGRAM, None).unwrap();
+        raw_socket.bind(&bind_address).unwrap();
+        raw_socket.set_send_buffer_size(chunk_size * 1024 * 1024).unwrap();
+
+        let socket: std::net::UdpSocket = raw_socket.into();
 
         info!(
-            "Socket bound to {}, waiting for hello message...",
+            "Socket bound to {:?}, waiting for hello message...",
             bind_address
         );
 

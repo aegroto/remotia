@@ -49,6 +49,7 @@ pub fn launch_decode_thread(
                 let encoded_frame_buffer = receive_result.encoded_frame_buffer;
                 let received_frame = receive_result.received_frame.unwrap();
 
+                debug!("Sending the encoded frame to the decoder...");
                 let decoding_start_time = Instant::now();
                 let decoder_result = decoder
                     .decode(
@@ -76,6 +77,7 @@ pub fn launch_decode_thread(
                 None
             };
 
+            debug!("Sending the decode result...");
             let send_result = decode_result_sender.send(DecodeResult {
                 raw_frame_buffer,
                 frame_stats,
