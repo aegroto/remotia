@@ -86,7 +86,7 @@ impl Encoder for H264VAAPIEncoder {
     fn encode(&mut self, input_buffer: &[u8], output_buffer: &mut [u8]) -> usize {
         let avframe = self
             .yuv420_avframe_builder
-            .create_avframe(&mut self.encode_context, input_buffer);
+            .create_avframe(&mut self.encode_context, input_buffer, false);
 
         self.ffmpeg_encoding_bridge
             .encode_avframe(&mut self.encode_context, avframe, output_buffer)
