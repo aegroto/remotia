@@ -1,18 +1,22 @@
 #[cfg(test)]
 mod tests;
 
+mod reconstruct;
+
 use std::{collections::HashMap, fmt::Debug, net::SocketAddr, time::Duration};
 
 use async_trait::async_trait;
 
 use log::{debug, info};
 use socket2::{Domain, Socket, Type};
-use tokio::net::UdpSocket;
+use tokio::{net::UdpSocket, time::Instant};
 
 use crate::{
     client::error::ClientError,
     common::network::remvsp::{RemVSPFrameFragment, RemVSPFrameHeader},
 };
+
+use self::reconstruct::FrameReconstructionState;
 
 use super::{FrameReceiver, ReceivedFrame};
 
@@ -26,78 +30,6 @@ pub struct RemVSPFrameReceiver {
 struct RemVSPReceptionState {
     last_reconstructed_frame: usize,
     frames_in_reception: HashMap<usize, FrameReconstructionState>,
-}
-
-#[derive(Default)]
-struct FrameReconstructionState {
-    frame_header: Option<RemVSPFrameHeader>,
-    received_fragments: HashMap<u16, Vec<u8>>,
-}
-
-impl Debug for FrameReconstructionState {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let received_fragments_resume = format!(
-            "{}/{}",
-            self.received_fragments.len(),
-            self.frame_header.unwrap().frame_fragments_count
-        );
-
-        f.debug_struct("FrameReconstructionState")
-            .field("frame_header", &self.frame_header)
-            .field("received_fragments", &received_fragments_resume)
-            .finish()
-    }
-}
-
-impl FrameReconstructionState {
-    pub fn has_received_fragment(&self, fragment: &RemVSPFrameFragment) -> bool {
-        self.received_fragments.contains_key(&fragment.fragment_id)
-    }
-
-    pub fn register_fragment(&mut self, fragment: RemVSPFrameFragment) {
-        if self.frame_header.is_none() {
-            self.frame_header = Some(fragment.frame_header);
-        }
-
-        self.received_fragments
-            .insert(fragment.fragment_id, fragment.data);
-    }
-
-    pub fn is_complete(&self) -> bool {
-        if self.frame_header.is_some() {
-            let received_fragments = self.received_fragments.len() as u16;
-            let frame_fragments = self.frame_header.unwrap().frame_fragments_count;
-
-            return received_fragments == frame_fragments;
-        }
-
-        return false;
-    }
-
-    pub fn reconstruct(self, buffer: &mut [u8]) -> usize {
-        let mut written_bytes = 0;
-
-        let frame_header = self
-            .frame_header
-            .expect("Reconstructing without a frame header");
-
-        let fragment_size = frame_header.fragment_size as usize;
-
-        for (fragment_id, data) in self.received_fragments.into_iter() {
-            let current_fragment_data_size = data.len();
-            let fragment_id = fragment_id as usize;
-            let fragment_offset = (fragment_id * fragment_size) as usize;
-
-            let fragment_buffer =
-                &mut buffer[fragment_offset..fragment_offset + current_fragment_data_size];
-
-            fragment_buffer.copy_from_slice(&data);
-
-            written_bytes += current_fragment_data_size;
-        }
-
-        written_bytes
-    }
 }
 
 impl RemVSPFrameReceiver {
@@ -168,17 +100,20 @@ impl RemVSPFrameReceiver {
         self.state.frames_in_reception.remove(&frame_id);
     }
 
-    fn reconstruct_frame(&mut self, frame_id: usize, output_buffer: &mut [u8]) -> usize {
-        let frame_size = self
+    fn reconstruct_frame(&mut self, frame_id: usize, output_buffer: &mut [u8]) -> (u128, usize) {
+        let frame = self
             .state
             .frames_in_reception
             .remove(&frame_id)
-            .expect("Retrieving a non-existing frame")
-            .reconstruct(output_buffer);
+            .expect("Retrieving a non-existing frame");
+
+        let delay = frame.first_reception.elapsed().as_millis();
+
+        let frame_size = frame.reconstruct(output_buffer);
 
         self.state.last_reconstructed_frame = frame_id;
 
-        frame_size
+        (delay, frame_size)
     }
 }
 
@@ -207,7 +142,7 @@ impl FrameReceiver for RemVSPFrameReceiver {
             self.register_frame_fragment(frame_fragment);
 
             if self.is_frame_complete(frame_id) {
-                info!(
+                debug!(
                     "Frame #{} has been received completely. Last received frame: {}",
                     frame_id, self.state.last_reconstructed_frame
                 );
@@ -220,12 +155,12 @@ impl FrameReceiver for RemVSPFrameReceiver {
 
                 debug!("Frames reception state: {:#?}", self.state);
 
-                let buffer_size = self.reconstruct_frame(frame_id, encoded_frame_buffer);
+                let (reception_delay, buffer_size) = self.reconstruct_frame(frame_id, encoded_frame_buffer);
 
                 break Ok(ReceivedFrame {
                     buffer_size,
                     capture_timestamp: frame_header.capture_timestamp,
-                    reception_delay: 0,
+                    reception_delay,
                 });
             }
         };
