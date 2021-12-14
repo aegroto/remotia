@@ -44,3 +44,5 @@ async-trait = "0.1.51"
 object-pool = "0.5.4"
 
 socket2 = "0.4.2"
+
+rand = "0.8.4"

@@ -7,16 +7,31 @@ use std::{
 use async_trait::async_trait;
 
 use log::{debug, info};
+use rand::Rng;
 use socket2::{Domain, Socket, Type};
 
 use crate::common::network::remvsp::{RemVSPFrameFragment, RemVSPFrameHeader};
 
 use super::FrameSender;
 
+pub struct RemVPSFrameSenderConfiguration {
+    retransmission_frequency: f32,
+}
+
+impl Default for RemVPSFrameSenderConfiguration {
+    fn default() -> Self {
+        Self {
+            retransmission_frequency: 0.5,
+        }
+    }
+}
+
 pub struct RemVSPFrameSender {
     socket: UdpSocket,
     chunk_size: usize,
     client_address: SocketAddr,
+
+    config: RemVPSFrameSenderConfiguration,
 
     state: RemVSPTransmissionState,
 }
@@ -28,7 +43,9 @@ impl RemVSPFrameSender {
 
         let raw_socket = Socket::new(Domain::IPV4, Type::DGRAM, None).unwrap();
         raw_socket.bind(&bind_address).unwrap();
-        raw_socket.set_send_buffer_size(chunk_size * 1024 * 1024).unwrap();
+        raw_socket
+            .set_send_buffer_size(chunk_size * 1024 * 1024)
+            .unwrap();
 
         let socket: std::net::UdpSocket = raw_socket.into();
 
@@ -53,10 +70,23 @@ impl RemVSPFrameSender {
             chunk_size,
             client_address,
 
+            config: Default::default(),
+
             state: RemVSPTransmissionState {
                 current_frame_id: 1,
             },
         }
+    }
+
+    pub fn send_fragment(&mut self, frame_fragment: &RemVSPFrameFragment) {
+        let bin_fragment = bincode::serialize(&frame_fragment).unwrap();
+
+        self.socket.send(&bin_fragment).unwrap();
+
+        debug!(
+            "Sent frame fragment #{}: {:?}",
+            frame_fragment.fragment_id, frame_fragment.frame_header
+        );
     }
 }
 
@@ -77,6 +107,8 @@ impl FrameSender for RemVSPFrameSender {
             capture_timestamp,
         };
 
+        let mut fragments_to_retransmit: Vec<RemVSPFrameFragment> = Vec::new();
+
         for (idx, chunk) in chunks.enumerate() {
             let frame_fragment = RemVSPFrameFragment {
                 frame_header,
@@ -84,15 +116,23 @@ impl FrameSender for RemVSPFrameSender {
                 data: chunk.to_vec(),
             };
 
-            let bin_fragment = bincode::serialize(&frame_fragment).unwrap();
+            self.send_fragment(&frame_fragment);
 
-            self.socket.send(&bin_fragment).unwrap();
-
-            debug!(
-                "Sent frame fragment #{}: {:?}",
-                frame_fragment.fragment_id, frame_fragment.frame_header
-            );
+            let mut rng = rand::thread_rng();
+            if rng.gen::<f32>() < self.config.retransmission_frequency {
+                fragments_to_retransmit.push(frame_fragment);
+            }
         }
+
+        info!(
+            "Retransmitting {}/{} fragments...",
+            fragments_to_retransmit.len(),
+            frame_header.frame_fragments_count
+        );
+
+        fragments_to_retransmit
+            .iter()
+            .for_each(|frame_fragment| self.send_fragment(&frame_fragment));
 
         self.state.current_frame_id += 1;
 
