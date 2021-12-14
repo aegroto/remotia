@@ -21,7 +21,7 @@ pub struct RemVPSFrameSenderConfiguration {
 impl Default for RemVPSFrameSenderConfiguration {
     fn default() -> Self {
         Self {
-            retransmission_frequency: 0.0,
+            retransmission_frequency: 0.5,
         }
     }
 }

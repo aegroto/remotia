@@ -2,6 +2,7 @@ use std::{collections::HashMap, fmt::Debug, net::SocketAddr, sync::Arc, time::Du
 
 use async_trait::async_trait;
 
+use itertools::Itertools;
 use log::{debug, info};
 use socket2::{Domain, Socket, Type};
 use tokio::{
@@ -84,11 +85,11 @@ impl RemVSPReceptionState {
 
         let mut stale_frames: Vec<usize> = Vec::new();
 
-        let iter = self.frames_in_reception.iter();
+        info!("Frames to check: {}", self.frames_in_reception.len());
 
-        info!("Frames to check: {}", iter.len());
+        for frame_id in self.frames_in_reception.keys().sorted() {
+            let frame = self.frames_in_reception.get(frame_id).unwrap();
 
-        for (frame_id, frame) in iter {
             if frame.is_complete() {
                 let frame_id = *frame_id;
 

@@ -46,3 +46,5 @@ object-pool = "0.5.4"
 socket2 = "0.4.2"
 
 rand = "0.8.4"
+
+itertools = "0.10.3"
