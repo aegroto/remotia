@@ -37,7 +37,8 @@ pub fn launch_decode_thread(
 
             let mut frame_stats = receive_result.frame_stats;
 
-            debug!("Waiting for raw frame buffer...");
+            let encoded_frame_buffer = receive_result.encoded_frame_buffer;
+
             let raw_frame_buffer = if frame_stats.error.is_none() {
                 debug!("Pulling raw frame buffer...");
 
@@ -46,27 +47,19 @@ pub fn launch_decode_thread(
                         .await
                         .expect("Raw frame buffer channel has been closed, terminating");
 
-                let encoded_frame_buffer = receive_result.encoded_frame_buffer;
                 let received_frame = receive_result.received_frame.unwrap();
 
                 debug!("Sending the encoded frame to the decoder...");
                 let decoding_start_time = Instant::now();
-                let decoder_result = decoder
-                    .decode(
-                        &encoded_frame_buffer[..received_frame.buffer_size],
-                        &mut raw_frame_buffer,
-                    );
+                let decoder_result = decoder.decode(
+                    &encoded_frame_buffer[..received_frame.buffer_size],
+                    &mut raw_frame_buffer,
+                );
                 let decoding_time = decoding_start_time.elapsed().as_millis();
 
                 if decoder_result.is_err() {
                     frame_stats.error = Some(decoder_result.unwrap_err());
                 }
-
-                let buffer_return_result = encoded_frame_buffers_sender.send(encoded_frame_buffer);
-                if let Err(e) = buffer_return_result {
-                    warn!("Encoded frame buffer return error: {}", e);
-                    break;
-                };
 
                 frame_stats.decoding_time = decoding_time;
                 frame_stats.decoder_idle_time =
@@ -74,7 +67,15 @@ pub fn launch_decode_thread(
 
                 Some(raw_frame_buffer)
             } else {
+                debug!("Receive error: {:?}", frame_stats.error);
                 None
+            };
+
+            let buffer_return_result =
+                encoded_frame_buffers_sender.send(encoded_frame_buffer);
+            if let Err(e) = buffer_return_result {
+                warn!("Encoded frame buffer return error: {}", e);
+                break;
             };
 
             debug!("Sending the decode result...");

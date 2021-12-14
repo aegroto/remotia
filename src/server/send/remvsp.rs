@@ -21,7 +21,7 @@ pub struct RemVPSFrameSenderConfiguration {
 impl Default for RemVPSFrameSenderConfiguration {
     fn default() -> Self {
         Self {
-            retransmission_frequency: 0.5,
+            retransmission_frequency: 0.0,
         }
     }
 }
@@ -124,7 +124,7 @@ impl FrameSender for RemVSPFrameSender {
             }
         }
 
-        info!(
+        debug!(
             "Retransmitting {}/{} fragments...",
             fragments_to_retransmit.len(),
             frame_header.frame_fragments_count
@@ -135,7 +135,5 @@ impl FrameSender for RemVSPFrameSender {
             .for_each(|frame_fragment| self.send_fragment(&frame_fragment));
 
         self.state.current_frame_id += 1;
-
-        // panic!("One frame test");
     }
 }

@@ -15,6 +15,9 @@ pub enum ClientError {
     #[error("Empty frame")]
     EmptyFrame,
 
+    #[error("No frames to pull")]
+    NoCompleteFrames,
+
     #[error("Stale frame")]
     StaleFrame,
 
