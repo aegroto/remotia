@@ -6,6 +6,14 @@ mod profile;
 mod receive;
 mod render;
 
+use beryllium::{
+  event::Event,
+  gl_window::{GlAttr, GlContextFlags, GlProfile},
+  init::{InitFlags, Sdl},
+  window::WindowFlags,
+  SdlResult,
+};
+
 use std::net::SocketAddr;
 use std::net::UdpSocket;
 use std::ops::ControlFlow;
@@ -35,8 +43,8 @@ use crate::client::pipeline::silo::decode::DecodeResult;
 use crate::client::pipeline::silo::profile::launch_profile_thread;
 use crate::client::pipeline::silo::receive::launch_receive_thread;
 use crate::client::pipeline::silo::receive::ReceiveResult;
-use crate::client::pipeline::silo::render::RenderResult;
 use crate::client::pipeline::silo::render::launch_render_thread;
+use crate::client::pipeline::silo::render::RenderResult;
 use crate::client::profiling::logging::console::ReceptionRoundConsoleLogger;
 use crate::client::profiling::logging::csv::ReceptionRoundCSVLogger;
 use crate::client::profiling::ReceivedFrameStats;
@@ -71,16 +79,28 @@ impl SiloClientPipeline {
 
     pub async fn run(self) {
         // Init display
-        let sdl = SDL::init(InitFlags::default()).unwrap();
-        let window = sdl
-            .create_raw_window(
-                "Remotia client",
-                WindowPosition::Centered,
-                self.config.canvas_width,
-                self.config.canvas_height,
-                0,
-            )
-            .unwrap();
+        let sdl = Sdl::init(InitFlags::EVERYTHING).unwrap();
+        sdl.allow_drop_events(true);
+
+        const FLAGS: i32 = if cfg!(debug_assertions) {
+            GlContextFlags::FORWARD_COMPATIBLE.as_i32() | GlContextFlags::DEBUG.as_i32()
+        } else {
+            GlContextFlags::FORWARD_COMPATIBLE.as_i32()
+        };
+        sdl.gl_set_attribute(GlAttr::MajorVersion, 3).unwrap();
+        sdl.gl_set_attribute(GlAttr::MinorVersion, 3).unwrap();
+        sdl.gl_set_attribute(GlAttr::Profile, GlProfile::Core as _).unwrap();
+        sdl.gl_set_attribute(GlAttr::Flags, FLAGS).unwrap();
+
+        let gl_win = sdl.create_gl_window(
+            zstr!("GL Demo Window"),
+            None,
+            (8000000, 6000000),
+            WindowFlags::ALLOW_HIGHDPI,
+        ).unwrap();
+        gl_win.set_swap_interval(1).unwrap();
+
+        let window = &*gl_win;
 
         info!("Starting to receive stream...");
 
@@ -146,13 +166,13 @@ impl SiloClientPipeline {
             pixels,
             raw_frame_buffers_sender,
             decode_result_receiver,
-            render_result_sender
+            render_result_sender,
         );
 
         let profile_handle = launch_profile_thread(
             render_result_receiver,
             self.config.csv_profiling,
-            self.config.console_profiling
+            self.config.console_profiling,
         );
 
         receive_handle.await.unwrap();
