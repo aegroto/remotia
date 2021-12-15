@@ -31,7 +31,6 @@ impl YUV420PAVFrameBuilder {
         avframe.set_width(encode_context.width);
         avframe.set_height(encode_context.height);
         avframe.set_pts(self.frame_count);
-        // TODO: Remove when frame dropping tolerance has been implemented
         if key_frame {
             avframe.set_pict_type(1);
         }

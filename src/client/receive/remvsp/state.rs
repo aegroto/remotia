@@ -91,6 +91,12 @@ impl RemVSPReceptionState {
             let frame = self.frames_in_reception.get(frame_id).unwrap();
             let frame_id = *frame_id;
 
+            if self.is_frame_stale(frame_id) {
+                info!("Frame #{} is stale, will be dropped. Frame status: {:?}", frame_id, frame);
+                frames_to_drop.push(frame_id);
+                continue
+            }
+
             if frame.is_complete() {
                 debug!(
                     "Frame #{} has been received completely. Last received frame: {}",
