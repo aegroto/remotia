@@ -83,35 +83,31 @@ impl RemVSPReceptionState {
 
         let mut pulled_frame: Option<ReceivedFrame> = None;
 
-        let mut stale_frames: Vec<usize> = Vec::new();
+        let mut frames_to_drop: Vec<usize> = Vec::new();
 
-        info!("Frames to check: {}", self.frames_in_reception.len());
+        let mut sorted_keys = self.frames_in_reception.keys().sorted(); 
 
-        for frame_id in self.frames_in_reception.keys().sorted() {
+        while let Some(frame_id) = sorted_keys.next() {
             let frame = self.frames_in_reception.get(frame_id).unwrap();
+            let frame_id = *frame_id;
 
             if frame.is_complete() {
-                let frame_id = *frame_id;
-
                 debug!(
                     "Frame #{} has been received completely. Last received frame: {}",
                     frame_id, self.last_reconstructed_frame
                 );
 
-                if self.is_frame_stale(frame_id) {
-                    stale_frames.push(frame_id);
-                    continue;
-                }
-
                 let received_frame = self.reconstruct_frame(frame_id, encoded_frame_buffer);
 
                 pulled_frame = Some(received_frame);
                 break;
+            } else if !frame.is_delayable() {
+                info!("Frame #{} is not delayable anymore, will be dropped. Frame status: {:?}", frame_id, frame);
+                frames_to_drop.push(frame_id);
             }
         }
 
-        for frame_id in stale_frames {
-            info!("Frame {} is stale, dropping...", frame_id);
+        for frame_id in frames_to_drop {
             self.drop_frame_data(frame_id);
         }
 
