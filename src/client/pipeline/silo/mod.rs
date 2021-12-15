@@ -7,11 +7,11 @@ mod receive;
 mod render;
 
 use beryllium::{
-  event::Event,
-  gl_window::{GlAttr, GlContextFlags, GlProfile},
-  init::{InitFlags, Sdl},
-  window::WindowFlags,
-  SdlResult,
+    event::Event,
+    gl_window::{GlAttr, GlContextFlags, GlProfile},
+    init::{InitFlags, Sdl},
+    window::WindowFlags,
+    SdlResult,
 };
 
 use std::net::SocketAddr;
@@ -89,15 +89,21 @@ impl SiloClientPipeline {
         };
         sdl.gl_set_attribute(GlAttr::MajorVersion, 3).unwrap();
         sdl.gl_set_attribute(GlAttr::MinorVersion, 3).unwrap();
-        sdl.gl_set_attribute(GlAttr::Profile, GlProfile::Core as _).unwrap();
+        sdl.gl_set_attribute(GlAttr::Profile, GlProfile::Core as _)
+            .unwrap();
         sdl.gl_set_attribute(GlAttr::Flags, FLAGS).unwrap();
 
-        let gl_win = sdl.create_gl_window(
-            zstr!("GL Demo Window"),
-            None,
-            (8000000, 6000000),
-            WindowFlags::ALLOW_HIGHDPI,
-        ).unwrap();
+        let gl_win = sdl
+            .create_gl_window(
+                zstr!("GL Demo Window"),
+                None,
+                (
+                    self.config.canvas_width as i32,
+                    self.config.canvas_height as i32,
+                ),
+                WindowFlags::ALLOW_HIGHDPI,
+            )
+            .unwrap();
         gl_win.set_swap_interval(1).unwrap();
 
         let window = &*gl_win;
