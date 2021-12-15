@@ -6,14 +6,6 @@ mod profile;
 mod receive;
 mod render;
 
-use beryllium::{
-    event::Event,
-    gl_window::{GlAttr, GlContextFlags, GlProfile},
-    init::{InitFlags, Sdl},
-    window::WindowFlags,
-    SdlResult,
-};
-
 use std::net::SocketAddr;
 use std::net::UdpSocket;
 use std::ops::ControlFlow;
@@ -52,6 +44,7 @@ use crate::client::profiling::ReceptionRoundStats;
 use crate::client::receive::FrameReceiver;
 use crate::client::utils::decoding::packed_bgr_to_packed_rgba;
 use crate::client::utils::profilation::setup_round_stats;
+use crate::common::window::create_gl_window;
 
 pub struct SiloClientConfiguration {
     pub decoder: Box<dyn Decoder + Send>,
@@ -79,33 +72,10 @@ impl SiloClientPipeline {
 
     pub async fn run(self) {
         // Init display
-        let sdl = Sdl::init(InitFlags::EVERYTHING).unwrap();
-        sdl.allow_drop_events(true);
-
-        const FLAGS: i32 = if cfg!(debug_assertions) {
-            GlContextFlags::FORWARD_COMPATIBLE.as_i32() | GlContextFlags::DEBUG.as_i32()
-        } else {
-            GlContextFlags::FORWARD_COMPATIBLE.as_i32()
-        };
-        sdl.gl_set_attribute(GlAttr::MajorVersion, 3).unwrap();
-        sdl.gl_set_attribute(GlAttr::MinorVersion, 3).unwrap();
-        sdl.gl_set_attribute(GlAttr::Profile, GlProfile::Core as _)
-            .unwrap();
-        sdl.gl_set_attribute(GlAttr::Flags, FLAGS).unwrap();
-
-        let gl_win = sdl
-            .create_gl_window(
-                zstr!("GL Demo Window"),
-                None,
-                (
-                    self.config.canvas_width as i32,
-                    self.config.canvas_height as i32,
-                ),
-                WindowFlags::ALLOW_HIGHDPI,
-            )
-            .unwrap();
-        gl_win.set_swap_interval(1).unwrap();
-
+        let gl_win = create_gl_window(
+            self.config.canvas_width as i32,
+            self.config.canvas_height as i32,
+        );
         let window = &*gl_win;
 
         info!("Starting to receive stream...");
