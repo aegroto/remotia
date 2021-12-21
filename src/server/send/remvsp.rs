@@ -15,13 +15,13 @@ use crate::common::network::remvsp::{RemVSPFrameFragment, RemVSPFrameHeader};
 use super::FrameSender;
 
 pub struct RemVPSFrameSenderConfiguration {
-    retransmission_frequency: f32,
+    pub retransmission_frequency: f32,
 }
 
 impl Default for RemVPSFrameSenderConfiguration {
     fn default() -> Self {
         Self {
-            retransmission_frequency: 1.0,
+            retransmission_frequency: 0.5,
         }
     }
 }
@@ -37,7 +37,7 @@ pub struct RemVSPFrameSender {
 }
 
 impl RemVSPFrameSender {
-    pub fn listen(port: i16, chunk_size: usize) -> Self {
+    pub fn listen(port: i16, chunk_size: usize, config: RemVPSFrameSenderConfiguration) -> Self {
         let bind_address: SocketAddr = format!("127.0.0.1:{}", port).parse().unwrap();
         let bind_address = bind_address.into();
 
@@ -70,7 +70,7 @@ impl RemVSPFrameSender {
             chunk_size,
             client_address,
 
-            config: Default::default(),
+            config,
 
             state: RemVSPTransmissionState {
                 current_frame_id: 1,

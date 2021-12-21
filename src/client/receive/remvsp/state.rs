@@ -32,7 +32,7 @@ impl RemVSPReceptionState {
 
             if frame_reconstruction_state.is_some() {
                 debug!(
-                    "Frame {} has been partially received, already, updating the reconstruction state", frame_id
+                    "Frame {} has been partially received already, updating the reconstruction state", frame_id
                 );
                 frame_reconstruction_state.unwrap()
             } else {
@@ -85,19 +85,28 @@ impl RemVSPReceptionState {
 
         let mut frames_to_drop: Vec<usize> = Vec::new();
 
-        let mut sorted_keys = self.frames_in_reception.keys().sorted(); 
+        let mut sorted_keys = self.frames_in_reception.keys().sorted();
 
         while let Some(frame_id) = sorted_keys.next() {
             let frame = self.frames_in_reception.get(frame_id).unwrap();
             let frame_id = *frame_id;
 
             if self.is_frame_stale(frame_id) {
-                debug!("Frame #{} is stale, will be dropped. Frame status: {:?}", frame_id, frame);
+                debug!(
+                    "Frame #{} is stale, will be dropped. Frame status: {:?}",
+                    frame_id, frame
+                );
                 frames_to_drop.push(frame_id);
-                continue
+                continue;
             }
 
-            if frame.is_complete() {
+            if !frame.is_delayable() {
+                debug!(
+                    "Frame #{} is not delayable anymore, will be dropped. Frame status: {:?}",
+                    frame_id, frame
+                );
+                frames_to_drop.push(frame_id);
+            } else if frame.is_complete() {
                 debug!(
                     "Frame #{} has been received completely. Last received frame: {}",
                     frame_id, self.last_reconstructed_frame
@@ -107,9 +116,6 @@ impl RemVSPReceptionState {
 
                 pulled_frame = Some(received_frame);
                 break;
-            } else if !frame.is_delayable() {
-                debug!("Frame #{} is not delayable anymore, will be dropped. Frame status: {:?}", frame_id, frame);
-                frames_to_drop.push(frame_id);
             }
         }
 
