@@ -59,6 +59,7 @@ pub fn launch_decode_thread(
 
                 if decoder_result.is_err() {
                     frame_stats.error = Some(decoder_result.unwrap_err());
+                    debug!("Decode error: {:?}", frame_stats.error);
                 }
 
                 frame_stats.decoding_time = decoding_time;

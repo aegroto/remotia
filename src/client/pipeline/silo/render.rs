@@ -47,10 +47,11 @@ pub fn launch_render_thread(
             let mut frame_stats = decode_result.frame_stats;
 
             if decode_result.raw_frame_buffer.is_some() {
-                let raw_frame_buffer = decode_result.raw_frame_buffer.unwrap();
+                let mut raw_frame_buffer = decode_result.raw_frame_buffer.unwrap();
 
                 if frame_stats.error.is_none() {
-                    debug!("Rendering the frame...");
+                    debug!("Rendering frame with stats: {:?}", frame_stats);
+
                     let rendering_start_time = Instant::now();
                     packed_bgr_to_packed_rgba(&raw_frame_buffer, pixels.get_frame());
                     pixels.render().unwrap();
@@ -74,6 +75,7 @@ pub fn launch_render_thread(
                 }
 
                 debug!("Returning the raw frame buffer back...");
+                raw_frame_buffer.fill(0);
                 let buffer_return_result = raw_frame_buffers_sender.send(raw_frame_buffer);
                 if let Err(e) = buffer_return_result {
                     warn!("Raw frame buffer return error: {}", e);

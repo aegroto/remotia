@@ -24,7 +24,7 @@ pub fn create_gl_window(width: i32, height: i32) -> GlWindow {
 
     let gl_win = sdl
         .create_gl_window(
-            zstr!("GL Demo Window"),
+            zstr!("Remotia client"),
             None,
             (width, height),
             WindowFlags::ALLOW_HIGHDPI,

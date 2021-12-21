@@ -18,6 +18,9 @@ pub enum ClientError {
     #[error("No frames to pull")]
     NoCompleteFrames,
 
+    #[error("No decoded frames available")]
+    NoDecodedFrames,
+
     #[error("Stale frame")]
     StaleFrame,
 
