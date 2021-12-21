@@ -92,7 +92,7 @@ impl RemVSPReceptionState {
             let frame_id = *frame_id;
 
             if self.is_frame_stale(frame_id) {
-                info!("Frame #{} is stale, will be dropped. Frame status: {:?}", frame_id, frame);
+                debug!("Frame #{} is stale, will be dropped. Frame status: {:?}", frame_id, frame);
                 frames_to_drop.push(frame_id);
                 continue
             }
@@ -108,7 +108,7 @@ impl RemVSPReceptionState {
                 pulled_frame = Some(received_frame);
                 break;
             } else if !frame.is_delayable() {
-                info!("Frame #{} is not delayable anymore, will be dropped. Frame status: {:?}", frame_id, frame);
+                debug!("Frame #{} is not delayable anymore, will be dropped. Frame status: {:?}", frame_id, frame);
                 frames_to_drop.push(frame_id);
             }
         }
