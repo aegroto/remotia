@@ -78,7 +78,7 @@ impl RemVSPFrameSender {
         }
     }
 
-    pub fn send_fragment(&mut self, frame_fragment: &RemVSPFrameFragment) {
+    pub fn send_fragment(&mut self, frame_fragment: &RemVSPFrameFragment) -> usize {
         let bin_fragment = bincode::serialize(&frame_fragment).unwrap();
 
         self.socket.send(&bin_fragment).unwrap();
@@ -87,6 +87,8 @@ impl RemVSPFrameSender {
             "Sent frame fragment #{}: {:?}",
             frame_fragment.fragment_id, frame_fragment.frame_header
         );
+
+        bin_fragment.len()
     }
 }
 
@@ -97,7 +99,7 @@ struct RemVSPTransmissionState {
 
 #[async_trait]
 impl FrameSender for RemVSPFrameSender {
-    async fn send_frame(&mut self, capture_timestamp: u128, frame_buffer: &[u8]) {
+    async fn send_frame(&mut self, capture_timestamp: u128, frame_buffer: &[u8]) -> usize {
         let chunks = frame_buffer.chunks(self.chunk_size);
 
         let frame_header = RemVSPFrameHeader {
@@ -106,6 +108,8 @@ impl FrameSender for RemVSPFrameSender {
             fragment_size: self.chunk_size as u16,
             capture_timestamp,
         };
+
+        let mut transmitted_bytes: usize = 0;
 
         let mut fragments_to_retransmit: Vec<RemVSPFrameFragment> = Vec::new();
 
@@ -116,7 +120,7 @@ impl FrameSender for RemVSPFrameSender {
                 data: chunk.to_vec(),
             };
 
-            self.send_fragment(&frame_fragment);
+            transmitted_bytes += self.send_fragment(&frame_fragment);
 
             let mut rng = rand::thread_rng();
             if rng.gen::<f32>() < self.config.retransmission_frequency {
@@ -132,8 +136,12 @@ impl FrameSender for RemVSPFrameSender {
 
         fragments_to_retransmit
             .iter()
-            .for_each(|frame_fragment| self.send_fragment(&frame_fragment));
+            .for_each(|frame_fragment| { 
+                transmitted_bytes += self.send_fragment(&frame_fragment)
+            });
 
         self.state.current_frame_id += 1;
+
+        transmitted_bytes
     }
 }
