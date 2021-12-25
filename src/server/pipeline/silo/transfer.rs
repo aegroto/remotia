@@ -14,7 +14,6 @@ use crate::server::send::FrameSender;
 use super::encode::EncodeResult;
 
 pub struct TransferResult {
-    // pub transmitted_frame_buffer: Reusable<'static, BytesMut>,
     pub frame_stats: TransmittedFrameStats,
 }
 

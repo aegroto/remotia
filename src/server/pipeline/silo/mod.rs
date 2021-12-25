@@ -67,9 +67,6 @@ impl SiloServerPipeline {
         let raw_frame_size = self.config.width * self.config.height * 3;
         let maximum_encoded_frame_size = self.config.width * self.config.height * 3;
 
-        // let (raw_frame_buffers_sender,  raw_frame_buffers_receiver,) = mpsc::channel::<BytesMut>(MAXIMUM_ENCODED_FRAME_BUFFERS);
-        // let (encoded_frame_buffers_sender,  encoded_frame_buffers_receiver,) = mpsc::channel::<BytesMut>(MAXIMUM_ENCODED_FRAME_BUFFERS);
-
         let (raw_frame_buffers_sender,  raw_frame_buffers_receiver,) = mpsc::unbounded_channel::<BytesMut>();
         let (encoded_frame_buffers_sender,  encoded_frame_buffers_receiver,) = mpsc::unbounded_channel::<BytesMut>();
 
