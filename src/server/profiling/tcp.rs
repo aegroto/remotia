@@ -5,12 +5,12 @@ use tokio::sync::Mutex;
 
 use async_trait::async_trait;
 
-use crate::common::feedback::ServerFeedbackMessage;
+use crate::common::feedback::FeedbackMessage;
 
 use super::ServerProfiler;
 
 pub struct TCPServerProfiler {
-    feedbacks: Arc<Mutex<Vec<ServerFeedbackMessage>>>
+    feedbacks: Arc<Mutex<Vec<FeedbackMessage>>>
 }
 
 impl TCPServerProfiler {
@@ -37,7 +37,7 @@ impl TCPServerProfiler {
             loop {
                 let read_bytes = socket.read(&mut read_buffer).unwrap();
                 let binarized_obj_buffer = &read_buffer[..read_bytes];
-                let message: ServerFeedbackMessage = bincode::deserialize(binarized_obj_buffer).unwrap();
+                let message: FeedbackMessage = bincode::deserialize(binarized_obj_buffer).unwrap();
 
                 feedbacks.lock().await.push(message);
             }
@@ -47,7 +47,7 @@ impl TCPServerProfiler {
 
 #[async_trait]
 impl ServerProfiler for TCPServerProfiler {
-    async fn pull_feedback(&mut self) -> Option<ServerFeedbackMessage> {
+    async fn pull_feedback(&mut self) -> Option<FeedbackMessage> {
         self.feedbacks.lock().await.pop()
     }
 }

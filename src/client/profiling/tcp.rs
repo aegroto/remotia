@@ -2,7 +2,7 @@ use std::io::Write;
 
 use tokio::{io::AsyncWriteExt, net::TcpStream};
 
-use crate::common::feedback::ServerFeedbackMessage;
+use crate::common::feedback::FeedbackMessage;
 
 use super::{ClientProfiler, ReceivedFrameStats};
 
@@ -23,10 +23,10 @@ impl TCPClientProfiler {
 #[async_trait]
 impl ClientProfiler for TCPClientProfiler {
     async fn profile_frame(&mut self, frame_stats: ReceivedFrameStats) {
-        let mut message: Option<ServerFeedbackMessage> = None;
+        let mut message: Option<FeedbackMessage> = None;
 
         if frame_stats.frame_delay > 200 {
-            message = Some(ServerFeedbackMessage::HighFrameDelay(
+            message = Some(FeedbackMessage::HighFrameDelay(
                 frame_stats.frame_delay,
             ));
         }

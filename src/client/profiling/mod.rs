@@ -7,7 +7,7 @@ pub mod tcp;
 use log::info;
 use serde::Serialize;
 
-use crate::common::feedback::ServerFeedbackMessage;
+use crate::common::feedback::FeedbackMessage;
 
 use self::logging::{ReceptionRoundLogger, console::ReceptionRoundConsoleLogger};
 

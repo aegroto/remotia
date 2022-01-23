@@ -19,7 +19,7 @@ use std::cmp::max;
 use std::thread::{self};
 use std::time::Duration;
 
-use crate::common::feedback::ServerFeedbackMessage;
+use crate::common::feedback::FeedbackMessage;
 use crate::server::capture::FrameCapturer;
 use crate::server::encode::Encoder;
 use crate::server::pipeline::silo::capture::{launch_capture_thread, CaptureResult};
@@ -98,7 +98,7 @@ impl SiloServerPipeline {
             mpsc::unbounded_channel::<TransferResult>();
 
         let (feedback_sender, encoder_feedback_receiver) =
-            broadcast::channel::<ServerFeedbackMessage>(32);
+            broadcast::channel::<FeedbackMessage>(32);
 
         let capture_handle = launch_capture_thread(
             spin_time,

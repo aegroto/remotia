@@ -12,7 +12,7 @@ use rsmpeg::{
 
 use cstr::cstr;
 
-use crate::{common::feedback::ServerFeedbackMessage, server::{encode::Encoder}};
+use crate::{common::feedback::FeedbackMessage, server::{encode::Encoder}};
 
 use super::{frame_builders::yuv420p::YUV420PAVFrameBuilder, FFMpegEncodingBridge};
 
@@ -94,7 +94,7 @@ impl Encoder for H264Encoder {
         encoded_bytes
     }
 
-    fn handle_feedback(&mut self, message: ServerFeedbackMessage) {
+    fn handle_feedback(&mut self, message: FeedbackMessage) {
         info!("Feedback message: {:?}", message);
     }
 }

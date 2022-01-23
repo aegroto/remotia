@@ -5,7 +5,7 @@ use log::{debug, info, warn};
 use object_pool::{Pool, Reusable};
 use tokio::{sync::{broadcast::{Receiver, error::TryRecvError}, mpsc::{UnboundedReceiver, UnboundedSender}}, task::JoinHandle};
 
-use crate::{common::{feedback::ServerFeedbackMessage, helpers::silo::channel_pull}, server::{encode::Encoder, profiling::TransmittedFrameStats}};
+use crate::{common::{feedback::FeedbackMessage, helpers::silo::channel_pull}, server::{encode::Encoder, profiling::TransmittedFrameStats}};
 
 use super::capture::CaptureResult;
 
@@ -22,7 +22,7 @@ pub fn launch_encode_thread(
     mut encoded_frame_buffers_receiver: UnboundedReceiver<BytesMut>,
     mut capture_result_receiver: UnboundedReceiver<CaptureResult>,
     encode_result_sender: UnboundedSender<EncodeResult>,
-    mut feedback_receiver: Receiver<ServerFeedbackMessage>,
+    mut feedback_receiver: Receiver<FeedbackMessage>,
     maximum_capture_delay: u128,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {

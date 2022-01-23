@@ -10,7 +10,7 @@ use tokio::{
     task::JoinHandle,
 };
 
-use crate::{common::{feedback::ServerFeedbackMessage, helpers::silo::channel_pull}, server::{
+use crate::{common::{feedback::FeedbackMessage, helpers::silo::channel_pull}, server::{
         profiling::{TransmissionRoundStats, TransmittedFrameStats, ServerProfiler},
         utils::profilation::setup_round_stats,
     }};
@@ -22,7 +22,7 @@ pub fn launch_profile_thread(
     csv_profiling: bool,
     console_profiling: bool,
     mut transfer_result_receiver: UnboundedReceiver<TransferResult>,
-    feedback_sender: Sender<ServerFeedbackMessage>,
+    feedback_sender: Sender<FeedbackMessage>,
     round_duration: Duration,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
