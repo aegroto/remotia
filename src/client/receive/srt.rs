@@ -10,7 +10,7 @@ use tokio::time::timeout;
 
 use futures::TryStreamExt;
 use log::{debug, info, warn};
-use srt_tokio::{SrtSocket, SrtSocketBuilder};
+use srt_tokio::{SrtSocket, SrtSocketBuilder, options::{ByteCount, PacketSize}};
 
 use crate::{
     client::error::ClientError,
@@ -29,9 +29,17 @@ pub struct SRTFrameReceiver {
 impl SRTFrameReceiver {
     pub async fn new(server_address: &str, latency: Duration, timeout: Duration) -> Self {
         info!("Connecting...");
-        let socket = SrtSocketBuilder::new_connect(server_address)
+
+        let receive_buffer_size = 1280 * 720 * 20;
+
+        let socket = SrtSocket::builder()
             .latency(latency)
-            .connect()
+            .set(|options| {
+                options.connect.timeout = timeout;
+                options.receiver.buffer_size = ByteCount(receive_buffer_size);
+                options.session.peer_idle_timeout = Duration::from_secs(2);
+            })
+            .call(server_address, None)
             .await
             .unwrap();
 
@@ -70,7 +78,8 @@ impl SRTFrameReceiver {
         debug!("Receiving encoded frame bytes...");
 
         match self.receive_with_timeout().await {
-            Ok((instant, binarized_obj)) => match bincode::deserialize::<FrameBody>(&binarized_obj) {
+            Ok((instant, binarized_obj)) => match bincode::deserialize::<FrameBody>(&binarized_obj)
+            {
                 Ok(body) => {
                     let frame_buffer = &mut frame_buffer[..body.frame_pixels.len()];
                     frame_buffer.copy_from_slice(&body.frame_pixels);
@@ -90,7 +99,7 @@ impl SRTFrameReceiver {
                     Ok(ReceivedFrame {
                         buffer_size: frame_buffer.len(),
                         capture_timestamp: body.capture_timestamp,
-                        reception_delay
+                        reception_delay,
                     })
                 }
                 Err(err) => {

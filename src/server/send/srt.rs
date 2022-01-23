@@ -11,7 +11,7 @@ use futures::{stream, SinkExt, StreamExt};
 
 use log::{debug, info, warn};
 use serde::Serialize;
-use srt_tokio::{SrtSocket, SrtSocketBuilder};
+use srt_tokio::{SrtSocket, SrtSocketBuilder, options::PacketSize};
 use tokio::time::timeout;
 
 use crate::{
@@ -30,10 +30,23 @@ pub struct SRTFrameSender {
 impl SRTFrameSender {
     pub async fn new(port: u16, latency: Duration, timeout: Duration) -> Self {
         info!("Listening...");
-        let socket = SrtSocketBuilder::new_listen()
+        // let socket = SrtSocketBuilder::new_listen()
+        //     .latency(latency)
+        //     .local_port(port)
+        //     .connect()
+        //     .await
+        //     .unwrap();
+        // let listen_address = format!(":{}", port);
+
+        let socket = SrtSocket::builder()
             .latency(latency)
+            .set(|options| {
+                options.connect.timeout = timeout;
+                options.sender.max_payload_size = PacketSize(512);
+                options.session.peer_idle_timeout = Duration::from_secs(2);
+            })
             .local_port(port)
-            .connect()
+            .listen()
             .await
             .unwrap();
 
