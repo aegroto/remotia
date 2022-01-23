@@ -60,6 +60,11 @@ impl ReceptionRoundLogger for ReceptionRoundConsoleLogger {
         }
 
         info!(
+            "Average reception delay: {}ms",
+            vec_avg!(field_vec!(rendered_frames, reception_delay, u128), u128)
+        );
+
+        info!(
             "Average reception time: {}ms",
             vec_avg!(field_vec!(rendered_frames, reception_time, u128), u128)
         );
