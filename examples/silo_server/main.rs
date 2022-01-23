@@ -21,7 +21,7 @@ pub struct CommandLineServerOptions {
     #[clap(short, long, default_value = "h264")]
     encoder_name: String,
 
-    #[clap(short, long, default_value = "srt")]
+    #[clap(short, long, default_value = "remvsp")]
     frame_sender_name: String,
 
     #[clap(long)]
