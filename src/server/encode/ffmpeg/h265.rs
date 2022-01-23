@@ -70,7 +70,7 @@ impl Encoder for H265Encoder {
         self.ffmpeg_encoding_bridge.encode_avframe(&mut self.encode_context, avframe, output_buffer)
     }
 
-    fn handle_feedback(&mut self, message: crate::server::feedback::ServerFeedbackMessage) {
+    fn handle_feedback(&mut self, _message: crate::server::feedback::ServerFeedbackMessage) {
         todo!()
     }
 }

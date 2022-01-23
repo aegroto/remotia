@@ -26,7 +26,7 @@ pub fn launch_profile_thread(
     csv_profiling: bool,
     console_profiling: bool,
     mut transfer_result_receiver: UnboundedReceiver<TransferResult>,
-    mut feedback_sender: Sender<ServerFeedbackMessage>,
+    feedback_sender: Sender<ServerFeedbackMessage>,
     round_duration: Duration,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {

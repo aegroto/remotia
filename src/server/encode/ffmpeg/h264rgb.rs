@@ -102,7 +102,7 @@ impl Encoder for H264RGBEncoder {
         encoded_bytes
     }
 
-    fn handle_feedback(&mut self, message: crate::server::feedback::ServerFeedbackMessage) {
+    fn handle_feedback(&mut self, _message: crate::server::feedback::ServerFeedbackMessage) {
         todo!()
     }
 }
