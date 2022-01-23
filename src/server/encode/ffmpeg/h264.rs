@@ -65,6 +65,7 @@ impl H264Encoder {
 
                 let options = AVDictionary::new(cstr!(""), cstr!(""), 0)
                     .set(cstr!("preset"), cstr!("ultrafast"), 0)
+                    .set(cstr!("crf"), cstr!("45"), 0)
                     .set(cstr!("tune"), cstr!("zerolatency"), 0);
 
                 encode_context.open(Some(options)).unwrap();

@@ -33,12 +33,12 @@ impl SRTFrameReceiver {
         let receive_buffer_size = 1280 * 720 * 20;
 
         let socket = SrtSocket::builder()
-            .latency(latency)
+            /*.latency(latency)
             .set(|options| {
                 options.connect.timeout = timeout;
                 options.receiver.buffer_size = ByteCount(receive_buffer_size);
                 options.session.peer_idle_timeout = Duration::from_secs(2);
-            })
+            })*/
             .call(server_address, None)
             .await
             .unwrap();
@@ -52,21 +52,19 @@ impl SRTFrameReceiver {
         }
     }
 
-    async fn receive_with_timeout(&mut self) -> Result<(Instant, Bytes), ClientError> {
-        let receive_job = self.socket.try_next();
-
-        match timeout(self.timeout, receive_job).await {
+    async fn receive(&mut self) -> Result<(Instant, Bytes), ClientError> {
+        match self.socket.try_next().await {
             Ok(packet) => {
-                if let Some((instant, binarized_obj)) = packet.unwrap() {
+                if let Some((instant, binarized_obj)) = packet {
                     Ok((instant, binarized_obj))
                 } else {
                     warn!("None packet");
                     Err(ClientError::InvalidPacket)
                 }
             }
-            Err(_) => {
-                debug!("Timeout");
-                return Err(ClientError::Timeout);
+            Err(err) => {
+                warn!("Unhandled connection error: {:?}", err);
+                return Err(ClientError::ConnectionError);
             }
         }
     }
@@ -77,7 +75,7 @@ impl SRTFrameReceiver {
     ) -> Result<ReceivedFrame, ClientError> {
         debug!("Receiving encoded frame bytes...");
 
-        match self.receive_with_timeout().await {
+        match self.receive().await {
             Ok((instant, binarized_obj)) => match bincode::deserialize::<FrameBody>(&binarized_obj)
             {
                 Ok(body) => {

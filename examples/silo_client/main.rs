@@ -15,7 +15,7 @@ struct Options {
     #[clap(short, long, default_value = "h264")]
     decoder_name: String,
 
-    #[clap(short, long, default_value = "srt")]
+    #[clap(short, long, default_value = "remvsp_srt")]
     frame_receiver_name: String,
 
     #[clap(short, long, default_value = "1280x720")]

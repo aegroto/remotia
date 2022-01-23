@@ -4,6 +4,8 @@ mod tests;
 mod reconstruct;
 mod state;
 
+pub mod srt;
+
 use std::{collections::HashMap, fmt::Debug, net::SocketAddr, sync::Arc, time::Duration};
 
 use async_trait::async_trait;

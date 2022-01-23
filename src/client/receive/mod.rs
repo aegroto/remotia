@@ -5,7 +5,7 @@ use async_trait::async_trait;
 use crate::client::error::ClientError;
 
 pub mod tcp;
-pub mod srt;
+// pub mod srt;
 pub mod remvsp;
 
 pub struct ReceivedFrame {

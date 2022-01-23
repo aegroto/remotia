@@ -14,10 +14,7 @@ use serde::Serialize;
 use srt_tokio::{SrtSocket, SrtSocketBuilder, options::PacketSize};
 use tokio::time::timeout;
 
-use crate::{
-    common::network::{FrameBody, FrameHeader},
-    server::error::ServerError,
-};
+use crate::{common::network::srt::SRTFrameBody, server::error::ServerError};
 
 use super::FrameSender;
 
@@ -39,12 +36,12 @@ impl SRTFrameSender {
         // let listen_address = format!(":{}", port);
 
         let socket = SrtSocket::builder()
-            .latency(latency)
+            /*.latency(latency)
             .set(|options| {
                 options.connect.timeout = timeout;
-                options.sender.max_payload_size = PacketSize(512);
+                options.sender.max_payload_size = PacketSize(0);
                 options.session.peer_idle_timeout = Duration::from_secs(2);
-            })
+            })*/
             .local_port(port)
             .listen()
             .await
@@ -62,28 +59,22 @@ impl SRTFrameSender {
             .unwrap();
     }
 
-    async fn send_with_timeout<T: Serialize>(&mut self, obj: T) -> Result<(), ServerError> {
-        let binarized_obj = Bytes::from(bincode::serialize(&obj).unwrap());
-
-        if let Err(_) = timeout(self.timeout, self.send_item(binarized_obj)).await {
-            debug!("Timeout");
-            Err(ServerError::Timeout)
-        } else {
-            Ok(())
-        }
-    }
-
     async fn send_frame_body(
         &mut self,
         capture_timestamp: u128,
         frame_buffer: &[u8],
     ) -> Result<(), ServerError> {
         debug!("Sending frame body...");
-        self.send_with_timeout(FrameBody {
+
+        let obj = SRTFrameBody {
             capture_timestamp,
-            frame_pixels: frame_buffer.to_vec(),
-        })
-        .await
+            frame_pixels: frame_buffer[..std::cmp::min(1024 * 64, frame_buffer.len())].to_vec(),
+        };
+
+        let binarized_obj = Bytes::from(bincode::serialize(&obj).unwrap());
+        self.send_item(binarized_obj).await;
+
+        Ok(())
     }
 }
 

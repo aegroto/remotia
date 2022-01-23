@@ -6,10 +6,11 @@ use std::{
 
 use crate::client::decode::h265::H265Decoder;
 use crate::client::decode::identity::IdentityDecoder;
+use crate::client::receive::remvsp::srt::RemVSPViaSRTFrameReceiver;
 use crate::client::{
     decode::{h264::H264Decoder, h264rgb::H264RGBDecoder, Decoder},
     receive::{
-        remvsp::RemVSPFrameReceiver, srt::SRTFrameReceiver, tcp::TCPFrameReceiver,
+        remvsp::RemVSPFrameReceiver, tcp::TCPFrameReceiver,
         FrameReceiver,
     },
 };
@@ -43,15 +44,19 @@ pub async fn setup_frame_receiver_by_name(
             let stream = TcpStream::connect(server_address)?;
             Ok(Box::new(TCPFrameReceiver::create(stream)))
         },
-        "srt" => Ok(Box::new(
+        /*"srt" => Ok(Box::new(
             SRTFrameReceiver::new(
                 &server_address.to_string(),
                 Duration::from_millis(10),
                 Duration::from_millis(20),
             )
             .await,
-        )),
+        )),*/
         "remvsp" => Ok(Box::new(RemVSPFrameReceiver::connect(
+            i16::from_str(binding_port).unwrap(),
+            server_address,
+        ).await)),
+        "remvsp_srt" => Ok(Box::new(RemVSPViaSRTFrameReceiver::connect(
             i16::from_str(binding_port).unwrap(),
             server_address,
         ).await)),
