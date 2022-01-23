@@ -100,11 +100,14 @@ impl SiloServerPipeline {
         let (feedback_sender, encoder_feedback_receiver) =
             broadcast::channel::<FeedbackMessage>(32);
 
+        let capturer_feedback_receiver = feedback_sender.subscribe();
+
         let capture_handle = launch_capture_thread(
             spin_time,
             raw_frame_buffers_receiver,
             capture_result_sender,
             self.config.frame_capturer,
+            capturer_feedback_receiver
         );
 
         let encode_handle = launch_encode_thread(
