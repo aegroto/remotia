@@ -45,10 +45,12 @@ use crate::client::receive::FrameReceiver;
 use crate::client::utils::decoding::packed_bgr_to_packed_rgba;
 use crate::client::utils::profilation::setup_round_stats;
 use crate::common::window::create_gl_window;
+use crate::client::profiling::ClientProfiler;
 
 pub struct SiloClientConfiguration {
     pub decoder: Box<dyn Decoder + Send>,
     pub frame_receiver: Box<dyn FrameReceiver + Send>,
+    pub profiler: Box<dyn ClientProfiler + Send>,
 
     pub canvas_width: u32,
     pub canvas_height: u32,
@@ -146,6 +148,7 @@ impl SiloClientPipeline {
         );
 
         let profile_handle = launch_profile_thread(
+            self.config.profiler,
             render_result_receiver,
             self.config.csv_profiling,
             self.config.console_profiling,

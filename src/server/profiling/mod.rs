@@ -6,7 +6,7 @@ use crate::server::profiling::logging::console::TransmissionRoundConsoleLogger;
 
 use self::logging::TransmissionRoundLogger;
 
-use super::feedback::ServerFeedbackMessage;
+use crate::common::feedback::ServerFeedbackMessage;
 
 use async_trait::async_trait;
 

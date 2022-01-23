@@ -12,7 +12,7 @@ use rsmpeg::{
 
 use cstr::cstr;
 
-use crate::server::encode::Encoder;
+use crate::{common::feedback::ServerFeedbackMessage, server::encode::Encoder};
 
 use super::{
     frame_builders::{bgr::BGRAVFrameBuilder, yuv420p::YUV420PAVFrameBuilder},
@@ -102,7 +102,7 @@ impl Encoder for H264RGBEncoder {
         encoded_bytes
     }
 
-    fn handle_feedback(&mut self, _message: crate::server::feedback::ServerFeedbackMessage) {
+    fn handle_feedback(&mut self, _message: ServerFeedbackMessage) {
         todo!()
     }
 }

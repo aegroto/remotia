@@ -10,14 +10,10 @@ use tokio::{
     task::JoinHandle,
 };
 
-use crate::{
-    common::helpers::silo::channel_pull,
-    server::{
-        feedback::ServerFeedbackMessage,
+use crate::{common::{feedback::ServerFeedbackMessage, helpers::silo::channel_pull}, server::{
         profiling::{TransmissionRoundStats, TransmittedFrameStats, ServerProfiler},
         utils::profilation::setup_round_stats,
-    },
-};
+    }};
 
 use super::transfer::TransferResult;
 

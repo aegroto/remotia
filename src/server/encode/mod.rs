@@ -1,4 +1,4 @@
-use super::feedback::ServerFeedbackMessage;
+use crate::common::feedback::ServerFeedbackMessage;
 
 pub mod identity;
 pub mod ffmpeg;

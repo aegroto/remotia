@@ -1,13 +1,10 @@
 use std::{net::SocketAddr, str::FromStr};
 
 use clap::Parser;
-use remotia::{
-    client::pipeline::silo::{SiloClientConfiguration, SiloClientPipeline},
-    common::{
+use remotia::{client::{pipeline::silo::{SiloClientConfiguration, SiloClientPipeline}, profiling::tcp::TCPClientProfiler}, common::{
         command_line::parse_canvas_resolution_str,
         helpers::client_setup::{setup_decoder_from_name, setup_frame_receiver_by_name},
-    },
-};
+    }};
 
 #[derive(Parser)]
 #[clap(version = "0.1.0", author = "Lorenzo C. <aegroto@protonmail.com>")]
@@ -55,10 +52,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     )
     .await
     .unwrap();
+    let profiler = Box::new(TCPClientProfiler::connect().await);
 
     let pipeline = SiloClientPipeline::new(SiloClientConfiguration {
         decoder,
         frame_receiver,
+        profiler,
+
         canvas_width,
         canvas_height,
         maximum_consecutive_connection_losses: options.maximum_consecutive_connection_losses,

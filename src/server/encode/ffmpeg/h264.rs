@@ -12,7 +12,7 @@ use rsmpeg::{
 
 use cstr::cstr;
 
-use crate::server::{encode::Encoder, feedback::ServerFeedbackMessage};
+use crate::{common::feedback::ServerFeedbackMessage, server::{encode::Encoder}};
 
 use super::{frame_builders::yuv420p::YUV420PAVFrameBuilder, FFMpegEncodingBridge};
 

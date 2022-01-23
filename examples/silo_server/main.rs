@@ -40,12 +40,11 @@ async fn main() -> std::io::Result<()> {
     let options = CommandLineServerOptions::parse();
     let (width, height) = parse_canvas_resolution_str(&options.resolution);
 
+    let profiler = Box::new(TCPServerProfiler::connect());
     let encoder = setup_encoder_by_name(width as usize, height as usize, &options.encoder_name);
     let frame_sender = setup_frame_sender_by_name(&options.frame_sender_name)
         .await
         .unwrap();
-
-    let profiler = Box::new(TCPServerProfiler::connect());
 
     let pipeline = SiloServerPipeline::new(SiloServerConfiguration {
         frame_capturer: Box::new(ScrapFrameCapturer::new_from_primary()),

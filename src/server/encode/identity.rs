@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use crate::common::feedback::ServerFeedbackMessage;
+
 use super::Encoder;
 
 pub struct IdentityEncoder { }
@@ -17,7 +19,7 @@ impl Encoder for IdentityEncoder {
         encoded_frame_length
     }
 
-    fn handle_feedback(&mut self, _message: crate::server::feedback::ServerFeedbackMessage) {
+    fn handle_feedback(&mut self, _message: ServerFeedbackMessage) {
         todo!()
     }
 }

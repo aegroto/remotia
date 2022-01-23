@@ -19,9 +19,9 @@ use std::cmp::max;
 use std::thread::{self};
 use std::time::Duration;
 
+use crate::common::feedback::ServerFeedbackMessage;
 use crate::server::capture::FrameCapturer;
 use crate::server::encode::Encoder;
-use crate::server::feedback::ServerFeedbackMessage;
 use crate::server::pipeline::silo::capture::{launch_capture_thread, CaptureResult};
 use crate::server::pipeline::silo::encode::{launch_encode_thread, EncodeResult};
 use crate::server::pipeline::silo::profile::launch_profile_thread;

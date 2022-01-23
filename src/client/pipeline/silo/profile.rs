@@ -6,9 +6,10 @@ use tokio::{sync::mpsc::UnboundedReceiver, task::JoinHandle};
 use crate::{client::utils::profilation::setup_round_stats, common::helpers::silo::channel_pull};
 
 use super::render::RenderResult;
-
+use crate::client::profiling::ClientProfiler;
 
 pub fn launch_profile_thread(
+    mut profiler: Box<dyn ClientProfiler + Send>,
     mut render_result_receiver: UnboundedReceiver<RenderResult>,
     csv_profiling: bool,
     console_profiling: bool
@@ -28,6 +29,7 @@ pub fn launch_profile_thread(
             frame_stats.total_time = total_time;
 
             round_stats.profile_frame(frame_stats);
+            profiler.profile_frame(frame_stats).await;
 
             let current_round_duration = round_stats.start_time.elapsed();
 

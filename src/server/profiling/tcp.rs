@@ -1,11 +1,11 @@
 use std::{io::Read, net::{TcpListener, TcpStream}, sync::Arc};
 
-use log::debug;
+use log::{debug, info};
 use tokio::sync::Mutex;
 
 use async_trait::async_trait;
 
-use crate::server::feedback::ServerFeedbackMessage;
+use crate::common::feedback::ServerFeedbackMessage;
 
 use super::ServerProfiler;
 
@@ -28,8 +28,8 @@ impl TCPServerProfiler {
         let feedbacks = self.feedbacks.clone();
 
         tokio::spawn(async move {
-            let listener = TcpListener::bind("127.0.0.1:5002").unwrap();
-            debug!("Waiting for client profiler connection...");
+            let listener = TcpListener::bind("127.0.0.1:5011").unwrap();
+            info!("Waiting for client profiler connection...");
             let (mut socket, _) = listener.accept().unwrap();
             
             let mut read_buffer = vec![0; 512];
