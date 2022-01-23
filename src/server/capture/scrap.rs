@@ -3,6 +3,8 @@ use scrap::{Capturer, Display, Frame};
 use core::slice;
 use std::io::ErrorKind::WouldBlock;
 
+use crate::common::feedback::FeedbackMessage;
+
 use super::FrameCapturer;
 
 pub struct ScrapFrameCapturer {
@@ -48,5 +50,8 @@ impl FrameCapturer for ScrapFrameCapturer {
 
     fn height(&self) -> usize {
         self.capturer.height()
+    }
+
+    fn handle_feedback(&mut self, _message: FeedbackMessage) {
     }
 }

@@ -3,9 +3,9 @@ use std::{sync::{Arc, Mutex}, thread, time::{Duration, Instant, SystemTime, UNIX
 use bytes::BytesMut;
 use chrono::Utc;
 use log::{debug, info, warn};
-use tokio::{sync::mpsc::{Receiver, Sender, UnboundedReceiver, UnboundedSender}, task::JoinHandle};
+use tokio::{sync::{broadcast, mpsc::{Receiver, Sender, UnboundedReceiver, UnboundedSender}}, task::JoinHandle};
 
-use crate::{common::helpers::silo::channel_pull, server::{
+use crate::{common::{feedback::FeedbackMessage, helpers::silo::channel_pull}, server::{
     capture::FrameCapturer, profiling::TransmittedFrameStats,
     utils::encoding::packed_bgra_to_packed_bgr,
 }};
@@ -23,12 +23,19 @@ pub fn launch_capture_thread(
     mut raw_frame_buffers_receiver: UnboundedReceiver<BytesMut>,
     capture_result_sender: UnboundedSender<CaptureResult>,
     mut frame_capturer: Box<dyn FrameCapturer + Send>,
+    mut feedback_receiver: broadcast::Receiver<FeedbackMessage>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         let mut last_frame_capture_time: i64 = 0;
 
         loop {
             debug!("Capturing frame...");
+            match feedback_receiver.try_recv() {
+                Ok(message) => { 
+                    frame_capturer.handle_feedback(message);
+                },
+                Err(_) => { }
+            };
 
             tokio::time::sleep(Duration::from_millis(std::cmp::max(
                 0,
