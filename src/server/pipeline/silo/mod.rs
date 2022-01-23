@@ -8,6 +8,7 @@ mod transfer;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
+use tokio::sync::broadcast;
 use tokio::sync::mpsc::{self, UnboundedReceiver, UnboundedSender};
 
 use async_trait::async_trait;
@@ -20,6 +21,7 @@ use std::time::Duration;
 
 use crate::server::capture::FrameCapturer;
 use crate::server::encode::Encoder;
+use crate::server::feedback::ServerFeedbackMessage;
 use crate::server::pipeline::silo::capture::{launch_capture_thread, CaptureResult};
 use crate::server::pipeline::silo::encode::{launch_encode_thread, EncodeResult};
 use crate::server::pipeline::silo::profile::launch_profile_thread;
@@ -27,17 +29,19 @@ use crate::server::pipeline::silo::transfer::{launch_transfer_thread, TransferRe
 use crate::server::profiling::TransmittedFrameStats;
 use crate::server::send::FrameSender;
 
+use crate::server::profiling::ServerProfiler;
 use crate::server::utils::encoding::{packed_bgra_to_packed_bgr, setup_packed_bgr_frame_buffer};
 use crate::server::utils::profilation::setup_round_stats;
 use clap::Parser;
 use log::{debug, error, info};
-
 use scrap::{Capturer, Display, Frame};
 
 pub struct SiloServerConfiguration {
     pub frame_capturer: Box<dyn FrameCapturer + Send>,
     pub encoder: Box<dyn Encoder + Send>,
     pub frame_sender: Box<dyn FrameSender + Send>,
+
+    pub profiler: Box<dyn ServerProfiler + Send>,
 
     pub console_profiling: bool,
     pub csv_profiling: bool,
@@ -67,8 +71,10 @@ impl SiloServerPipeline {
         let raw_frame_size = self.config.width * self.config.height * 3;
         let maximum_encoded_frame_size = self.config.width * self.config.height * 3;
 
-        let (raw_frame_buffers_sender,  raw_frame_buffers_receiver,) = mpsc::unbounded_channel::<BytesMut>();
-        let (encoded_frame_buffers_sender,  encoded_frame_buffers_receiver,) = mpsc::unbounded_channel::<BytesMut>();
+        let (raw_frame_buffers_sender, raw_frame_buffers_receiver) =
+            mpsc::unbounded_channel::<BytesMut>();
+        let (encoded_frame_buffers_sender, encoded_frame_buffers_receiver) =
+            mpsc::unbounded_channel::<BytesMut>();
 
         for _ in 0..MAXIMUM_RAW_FRAME_BUFFERS {
             let mut buf = BytesMut::with_capacity(raw_frame_size);
@@ -84,9 +90,15 @@ impl SiloServerPipeline {
 
         let round_duration = Duration::from_secs(1);
 
-        let (capture_result_sender, capture_result_receiver) = mpsc::unbounded_channel::<CaptureResult>();
-        let (encode_result_sender, encode_result_receiver) = mpsc::unbounded_channel::<EncodeResult>();
-        let (transfer_result_sender, transfer_result_receiver) = mpsc::unbounded_channel::<TransferResult>();
+        let (capture_result_sender, capture_result_receiver) =
+            mpsc::unbounded_channel::<CaptureResult>();
+        let (encode_result_sender, encode_result_receiver) =
+            mpsc::unbounded_channel::<EncodeResult>();
+        let (transfer_result_sender, transfer_result_receiver) =
+            mpsc::unbounded_channel::<TransferResult>();
+
+        let (feedback_sender, encoder_feedback_receiver) =
+            broadcast::channel::<ServerFeedbackMessage>(32);
 
         let capture_handle = launch_capture_thread(
             spin_time,
@@ -101,7 +113,8 @@ impl SiloServerPipeline {
             encoded_frame_buffers_receiver,
             capture_result_receiver,
             encode_result_sender,
-            MAXIMUM_CAPTURE_DELAY
+            encoder_feedback_receiver,
+            MAXIMUM_CAPTURE_DELAY,
         );
 
         let transfer_handle = launch_transfer_thread(
@@ -112,9 +125,11 @@ impl SiloServerPipeline {
         );
 
         let profile_handle = launch_profile_thread(
+            self.config.profiler,
             self.config.csv_profiling,
             self.config.console_profiling,
             transfer_result_receiver,
+            feedback_sender,
             round_duration,
         );
 

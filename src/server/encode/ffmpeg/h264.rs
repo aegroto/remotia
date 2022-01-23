@@ -2,7 +2,7 @@
 
 use std::ptr::NonNull;
 
-use log::debug;
+use log::{debug, info};
 use rsmpeg::{
     avcodec::{AVCodec, AVCodecContext},
     avutil::{AVDictionary, AVFrame},
@@ -12,7 +12,7 @@ use rsmpeg::{
 
 use cstr::cstr;
 
-use crate::server::encode::Encoder;
+use crate::server::{encode::Encoder, feedback::ServerFeedbackMessage};
 
 use super::{frame_builders::yuv420p::YUV420PAVFrameBuilder, FFMpegEncodingBridge};
 
@@ -92,5 +92,9 @@ impl Encoder for H264Encoder {
         self.state.encoded_frames += 1;
 
         encoded_bytes
+    }
+
+    fn handle_feedback(&mut self, message: ServerFeedbackMessage) {
+        info!("Feedback message: {:?}", message);
     }
 }

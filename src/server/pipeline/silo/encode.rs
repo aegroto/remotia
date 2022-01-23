@@ -3,15 +3,9 @@ use std::{sync::Arc, time::Instant};
 use bytes::BytesMut;
 use log::{debug, info, warn};
 use object_pool::{Pool, Reusable};
-use tokio::{
-    sync::mpsc::{Receiver, UnboundedReceiver, UnboundedSender},
-    task::JoinHandle,
-};
+use tokio::{sync::{broadcast::{Receiver, error::TryRecvError}, mpsc::{UnboundedReceiver, UnboundedSender}}, task::JoinHandle};
 
-use crate::{
-    common::helpers::silo::channel_pull,
-    server::{encode::Encoder, profiling::TransmittedFrameStats},
-};
+use crate::{common::helpers::silo::channel_pull, server::{encode::Encoder, feedback::ServerFeedbackMessage, profiling::TransmittedFrameStats}};
 
 use super::capture::CaptureResult;
 
@@ -28,10 +22,18 @@ pub fn launch_encode_thread(
     mut encoded_frame_buffers_receiver: UnboundedReceiver<BytesMut>,
     mut capture_result_receiver: UnboundedReceiver<CaptureResult>,
     encode_result_sender: UnboundedSender<EncodeResult>,
+    mut feedback_receiver: Receiver<ServerFeedbackMessage>,
     maximum_capture_delay: u128,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         loop {
+            match feedback_receiver.try_recv() {
+                Ok(message) => { 
+                    encoder.handle_feedback(message);
+                },
+                Err(_) => { }
+            };
+
             let (capture_result, capture_result_wait_time) =
                 channel_pull(&mut capture_result_receiver)
                     .await

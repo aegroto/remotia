@@ -2,30 +2,40 @@ use std::time::{Duration, Instant};
 
 use bytes::BytesMut;
 use log::debug;
-use tokio::{sync::mpsc::{Receiver, UnboundedReceiver}, task::JoinHandle};
+use tokio::{
+    sync::{
+        broadcast::Sender,
+        mpsc::{Receiver, UnboundedReceiver},
+    },
+    task::JoinHandle,
+};
 
-use crate::{common::helpers::silo::channel_pull, server::{profiling::{TransmissionRoundStats, TransmittedFrameStats}, utils::profilation::setup_round_stats}};
+use crate::{
+    common::helpers::silo::channel_pull,
+    server::{
+        feedback::ServerFeedbackMessage,
+        profiling::{TransmissionRoundStats, TransmittedFrameStats, ServerProfiler},
+        utils::profilation::setup_round_stats,
+    },
+};
 
 use super::transfer::TransferResult;
 
-/*pub struct ProfileResult {
-    pub last_frame_transmission_time: i64
-}*/
-
 pub fn launch_profile_thread(
-    csv_profiling: bool, 
+    mut profiler: Box<dyn ServerProfiler + Send>,
+    csv_profiling: bool,
     console_profiling: bool,
     mut transfer_result_receiver: UnboundedReceiver<TransferResult>,
-    round_duration: Duration
+    mut feedback_sender: Sender<ServerFeedbackMessage>,
+    round_duration: Duration,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         let mut round_stats = setup_round_stats(csv_profiling, console_profiling).unwrap();
 
         loop {
-            let (transfer_result, total_time) =
-                channel_pull(&mut transfer_result_receiver)
-                    .await
-                    .expect("Transfer result channel closed, terminating.");
+            let (transfer_result, total_time) = channel_pull(&mut transfer_result_receiver)
+                .await
+                .expect("Transfer result channel closed, terminating.");
 
             let mut frame_stats = transfer_result.frame_stats;
             frame_stats.total_time = total_time;
@@ -37,6 +47,11 @@ pub fn launch_profile_thread(
             if current_round_duration.gt(&round_duration) {
                 round_stats.log();
                 round_stats.reset();
+            }
+
+            while let Some(message) = profiler.pull_feedback().await {
+                feedback_sender.send(message)
+                    .expect("Unable to broadcast a feedback message");
             }
         }
     })

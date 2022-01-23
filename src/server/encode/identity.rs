@@ -16,4 +16,8 @@ impl Encoder for IdentityEncoder {
         output_buffer.copy_from_slice(input_buffer);
         encoded_frame_length
     }
+
+    fn handle_feedback(&mut self, message: crate::server::feedback::ServerFeedbackMessage) {
+        todo!()
+    }
 }
