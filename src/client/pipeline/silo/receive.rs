@@ -2,12 +2,14 @@ use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use bytes::BytesMut;
 use log::{debug, info, warn};
+use tokio::sync::broadcast;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
 
 use crate::client::error::ClientError;
 use crate::client::profiling::ReceivedFrameStats;
 use crate::client::receive::{FrameReceiver, ReceivedFrame};
+use crate::common::feedback::{FeedbackMessage};
 use crate::common::helpers::silo::channel_pull;
 
 pub struct ReceiveResult {
@@ -21,9 +23,17 @@ pub fn launch_receive_thread(
     mut frame_receiver: Box<dyn FrameReceiver + Send>,
     mut encoded_frame_buffers_receiver: UnboundedReceiver<BytesMut>,
     receive_result_sender: UnboundedSender<ReceiveResult>,
+    mut feedback_receiver: broadcast::Receiver<FeedbackMessage>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         loop {
+            match feedback_receiver.try_recv() {
+                Ok(message) => { 
+                    frame_receiver.handle_feedback(message);
+                },
+                Err(_) => { }
+            };
+
             debug!("Pulling empty encoded frame buffer...");
 
             let (mut encoded_frame_buffer, encoded_frame_buffer_wait_time) =

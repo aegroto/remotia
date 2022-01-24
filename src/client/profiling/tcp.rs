@@ -22,7 +22,7 @@ impl TCPClientProfiler {
 
 #[async_trait]
 impl ClientProfiler for TCPClientProfiler {
-    async fn profile_frame(&mut self, frame_stats: ReceivedFrameStats) {
+    async fn profile_frame(&mut self, frame_stats: ReceivedFrameStats) -> Option<FeedbackMessage> {
         let mut message: Option<FeedbackMessage> = None;
 
         if frame_stats.frame_delay > 200 {
@@ -36,5 +36,7 @@ impl ClientProfiler for TCPClientProfiler {
 
             self.socket.write(&binarized_message).await.unwrap();
         }
+
+        message
     }
 }

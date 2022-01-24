@@ -2,15 +2,9 @@ use std::time::Instant;
 
 use bytes::BytesMut;
 use log::{debug, warn};
-use tokio::{
-    sync::mpsc::{UnboundedReceiver, UnboundedSender},
-    task::JoinHandle,
-};
+use tokio::{sync::{broadcast, mpsc::{UnboundedReceiver, UnboundedSender}}, task::JoinHandle};
 
-use crate::{
-    client::{decode::Decoder, error::ClientError, profiling::ReceivedFrameStats},
-    common::helpers::silo::channel_pull,
-};
+use crate::{client::{decode::Decoder, error::ClientError, profiling::ReceivedFrameStats}, common::{feedback::FeedbackMessage, helpers::silo::channel_pull}};
 
 use super::receive::ReceiveResult;
 
@@ -26,9 +20,17 @@ pub fn launch_decode_thread(
     encoded_frame_buffers_sender: UnboundedSender<BytesMut>,
     mut receive_result_receiver: UnboundedReceiver<ReceiveResult>,
     decode_result_sender: UnboundedSender<DecodeResult>,
+    mut feedback_receiver: broadcast::Receiver<FeedbackMessage>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         loop {
+            match feedback_receiver.try_recv() {
+                Ok(message) => { 
+                    decoder.handle_feedback(message);
+                },
+                Err(_) => { }
+            };
+
             debug!("Waiting for receive result...");
             let (receive_result, receive_result_wait_time) =
                 channel_pull(&mut receive_result_receiver)

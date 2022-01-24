@@ -3,18 +3,12 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use bytes::BytesMut;
 use log::{debug, info, warn};
 use pixels::Pixels;
-use tokio::{
-    sync::mpsc::{UnboundedReceiver, UnboundedSender},
-    task::JoinHandle,
-};
+use tokio::{sync::{broadcast, mpsc::{UnboundedReceiver, UnboundedSender}}, task::JoinHandle};
 
-use crate::{
-    client::{
+use crate::{client::{
         decode::Decoder, error::ClientError, profiling::ReceivedFrameStats,
         utils::decoding::packed_bgr_to_packed_rgba,
-    },
-    common::helpers::silo::channel_pull,
-};
+    }, common::{feedback::FeedbackMessage, helpers::silo::channel_pull}};
 
 use super::decode::DecodeResult;
 
@@ -28,6 +22,7 @@ pub fn launch_render_thread(
     raw_frame_buffers_sender: UnboundedSender<BytesMut>,
     mut decode_result_receiver: UnboundedReceiver<DecodeResult>,
     render_result_sender: UnboundedSender<RenderResult>,
+    _feedback_receiver: broadcast::Receiver<FeedbackMessage>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         let target_fps = target_fps as f64;
@@ -36,6 +31,13 @@ pub fn launch_render_thread(
         let mut last_spin_time: u64 = 0;
 
         loop {
+            /*match feedback_receiver.try_recv() {
+                Ok(message) => { 
+                    decoder.handle_feedback(message);
+                },
+                Err(_) => { }
+            };*/
+
             let frame_dispatch_start_time = Instant::now();
 
             debug!("Waiting for the decode result...");

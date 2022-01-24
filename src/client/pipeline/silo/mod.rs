@@ -25,6 +25,7 @@ use log::{debug, error, warn};
 use pixels::wgpu;
 use pixels::PixelsBuilder;
 use pixels::{wgpu::Surface, Pixels, SurfaceTexture};
+use tokio::sync::broadcast;
 use tokio::sync::mpsc;
 use zstring::zstr;
 
@@ -44,6 +45,7 @@ use crate::client::profiling::ReceptionRoundStats;
 use crate::client::receive::FrameReceiver;
 use crate::client::utils::decoding::packed_bgr_to_packed_rgba;
 use crate::client::utils::profilation::setup_round_stats;
+use crate::common::feedback::FeedbackMessage;
 use crate::common::window::create_gl_window;
 use crate::client::profiling::ClientProfiler;
 
@@ -125,10 +127,14 @@ impl SiloClientPipeline {
         let (render_result_sender, render_result_receiver) =
             mpsc::unbounded_channel::<RenderResult>();
 
+        let (feedback_sender, receiver_feedback_receiver) =
+            broadcast::channel::<FeedbackMessage>(32);
+
         let receive_handle = launch_receive_thread(
             self.config.frame_receiver,
             encoded_frame_buffers_receiver,
             receive_result_sender,
+            receiver_feedback_receiver
         );
 
         let decode_handle = launch_decode_thread(
@@ -137,6 +143,7 @@ impl SiloClientPipeline {
             encoded_frame_buffers_sender,
             receive_result_receiver,
             decode_result_sender,
+            feedback_sender.subscribe()
         );
 
         let render_handle = launch_render_thread(
@@ -145,6 +152,7 @@ impl SiloClientPipeline {
             raw_frame_buffers_sender,
             decode_result_receiver,
             render_result_sender,
+            feedback_sender.subscribe()
         );
 
         let profile_handle = launch_profile_thread(
@@ -152,6 +160,7 @@ impl SiloClientPipeline {
             render_result_receiver,
             self.config.csv_profiling,
             self.config.console_profiling,
+            feedback_sender
         );
 
         receive_handle.await.unwrap();

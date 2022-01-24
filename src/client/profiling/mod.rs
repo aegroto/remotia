@@ -17,7 +17,7 @@ use async_trait::async_trait;
 
 #[async_trait]
 pub trait ClientProfiler {
-    async fn profile_frame(&mut self, frame_stats: ReceivedFrameStats);
+    async fn profile_frame(&mut self, frame_stats: ReceivedFrameStats) -> Option<FeedbackMessage>;
 }
 
 #[derive(Serialize, Default, Debug, Clone, Copy)]
