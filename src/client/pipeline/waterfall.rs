@@ -30,7 +30,6 @@ use crate::client::profiling::ReceptionRoundStats;
 use crate::client::receive::FrameReceiver;
 use crate::client::utils::decoding::packed_bgr_to_packed_rgba;
 use crate::client::utils::profilation::setup_round_stats;
-use crate::common::window::create_gl_window;
 
 pub struct WaterfallClientConfiguration {
     pub decoder: Box<dyn Decoder>,

@@ -47,7 +47,6 @@ use crate::client::render::Renderer;
 use crate::client::utils::decoding::packed_bgr_to_packed_rgba;
 use crate::client::utils::profilation::setup_round_stats;
 use crate::common::feedback::FeedbackMessage;
-use crate::common::window::create_gl_window;
 use crate::client::profiling::ClientProfiler;
 
 pub struct SiloClientConfiguration {
