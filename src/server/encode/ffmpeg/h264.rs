@@ -82,15 +82,19 @@ impl H264Encoder {
         let stability_diff =
             self.state.network_stability - self.state.last_update_network_stability;
 
-        if stability_diff.abs() < 0.05 {
+        if stability_diff.abs() < 0.1 {
             return;
         }
 
-        let crf = (51 as f32 * (1.0 - self.state.network_stability)) as u32;
+        let crf = self.recalculate_crf(21, 20);
         info!("Reconfiguring encoder with CRF {}", crf);
 
         self.encode_context = init_encoder(self.width, self.height, crf);
         self.state.last_update_network_stability = self.state.network_stability
+    }
+
+    fn recalculate_crf(&mut self, min_crf: u32, max_increase: u32) -> u32 {
+        min_crf + (max_increase as f32 * (1.0 - self.state.network_stability)) as u32
     }
 
     fn perform_quality_increase(&mut self) {
