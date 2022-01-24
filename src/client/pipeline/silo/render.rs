@@ -66,7 +66,7 @@ pub fn launch_render_thread(
             let frame_dispatch_time =
                 calculate_frame_dispatch_time(frame_stats, frame_dispatch_start_time);
 
-            if let ControlFlow::Break(_) = send_result(&render_result_sender, frame_stats) {
+            if let ControlFlow::Break(_) = push_result(&render_result_sender, frame_stats) {
                 break;
             }
 
@@ -91,7 +91,7 @@ fn calculate_frame_dispatch_time(
     frame_dispatch_time
 }
 
-fn send_result(
+fn push_result(
     render_result_sender: &UnboundedSender<RenderResult>,
     frame_stats: ReceivedFrameStats,
 ) -> ControlFlow<()> {
