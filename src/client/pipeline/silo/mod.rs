@@ -44,7 +44,6 @@ use crate::client::profiling::ReceivedFrameStats;
 use crate::client::profiling::ReceptionRoundStats;
 use crate::client::receive::FrameReceiver;
 use crate::client::render::Renderer;
-use crate::client::utils::decoding::packed_bgr_to_packed_rgba;
 use crate::client::utils::profilation::setup_round_stats;
 use crate::common::feedback::FeedbackMessage;
 use crate::client::profiling::ClientProfiler;

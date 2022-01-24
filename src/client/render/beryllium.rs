@@ -9,8 +9,6 @@ use log::debug;
 use pixels::{Pixels, PixelsBuilder, SurfaceTexture};
 use zstring::zstr;
 
-use crate::client::utils::decoding::packed_bgr_to_packed_rgba;
-
 use super::Renderer;
 
 pub struct BerylliumRenderer {
@@ -85,4 +83,14 @@ pub fn create_gl_window(width: i32, height: i32) -> GlWindow {
     gl_win.set_swap_interval(1).unwrap();
 
     gl_win
+}
+
+pub fn packed_bgr_to_packed_rgba(packed_bgr_buffer: &[u8], packed_bgra_buffer: &mut [u8]) {
+    let pixels_count = packed_bgra_buffer.len() / 4;
+
+    for i in 0..pixels_count {
+        packed_bgra_buffer[i * 4 + 2] = packed_bgr_buffer[i * 3];
+        packed_bgra_buffer[i * 4 + 1] = packed_bgr_buffer[i * 3 + 1];
+        packed_bgra_buffer[i * 4] = packed_bgr_buffer[i * 3 + 2];
+    }
 }

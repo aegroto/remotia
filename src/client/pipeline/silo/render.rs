@@ -3,9 +3,20 @@ use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 use bytes::BytesMut;
 use log::{debug, info, warn};
 use pixels::Pixels;
-use tokio::{sync::{broadcast, mpsc::{UnboundedReceiver, UnboundedSender}}, task::JoinHandle};
+use tokio::{
+    sync::{
+        broadcast,
+        mpsc::{UnboundedReceiver, UnboundedSender},
+    },
+    task::JoinHandle,
+};
 
-use crate::{client::{decode::Decoder, error::ClientError, profiling::ReceivedFrameStats, render::Renderer, utils::decoding::packed_bgr_to_packed_rgba}, common::{feedback::FeedbackMessage, helpers::silo::channel_pull}};
+use crate::{
+    client::{
+        decode::Decoder, error::ClientError, profiling::ReceivedFrameStats, render::Renderer
+    },
+    common::{feedback::FeedbackMessage, helpers::silo::channel_pull},
+};
 
 use super::decode::DecodeResult;
 
@@ -29,10 +40,10 @@ pub fn launch_render_thread(
 
         loop {
             match feedback_receiver.try_recv() {
-                Ok(message) => { 
+                Ok(message) => {
                     renderer.handle_feedback(message);
-                },
-                Err(_) => { }
+                }
+                Err(_) => {}
             };
 
             let frame_dispatch_start_time = Instant::now();
