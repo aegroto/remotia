@@ -4,9 +4,11 @@ use std::time::Instant;
 use bytes::BytesMut;
 use log::{debug, warn};
 use object_pool::{Pool, Reusable};
+use tokio::sync::broadcast;
 use tokio::sync::mpsc::{Receiver, UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
 
+use crate::common::feedback::FeedbackMessage;
 use crate::common::helpers::silo::channel_pull;
 use crate::server::profiling::TransmittedFrameStats;
 use crate::server::send::FrameSender;
@@ -22,9 +24,17 @@ pub fn launch_transfer_thread(
     encoded_frame_buffers_sender: UnboundedSender<BytesMut>,
     mut encode_result_receiver: UnboundedReceiver<EncodeResult>,
     transfer_result_sender: UnboundedSender<TransferResult>,
+    mut feedback_receiver: broadcast::Receiver<FeedbackMessage>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         loop {
+            match feedback_receiver.try_recv() {
+                Ok(message) => { 
+                    frame_sender.handle_feedback(message);
+                },
+                Err(_) => { }
+            };
+
             let (encode_result, encode_result_wait_time) =
                 channel_pull(&mut encode_result_receiver)
                     .await

@@ -97,17 +97,15 @@ impl SiloServerPipeline {
         let (transfer_result_sender, transfer_result_receiver) =
             mpsc::unbounded_channel::<TransferResult>();
 
-        let (feedback_sender, encoder_feedback_receiver) =
+        let (feedback_sender, capturer_feedback_receiver) =
             broadcast::channel::<FeedbackMessage>(32);
-
-        let capturer_feedback_receiver = feedback_sender.subscribe();
 
         let capture_handle = launch_capture_thread(
             spin_time,
             raw_frame_buffers_receiver,
             capture_result_sender,
             self.config.frame_capturer,
-            capturer_feedback_receiver
+            capturer_feedback_receiver 
         );
 
         let encode_handle = launch_encode_thread(
@@ -116,7 +114,7 @@ impl SiloServerPipeline {
             encoded_frame_buffers_receiver,
             capture_result_receiver,
             encode_result_sender,
-            encoder_feedback_receiver,
+            feedback_sender.subscribe(),
             MAXIMUM_CAPTURE_DELAY,
         );
 
@@ -125,6 +123,7 @@ impl SiloServerPipeline {
             encoded_frame_buffers_sender,
             encode_result_receiver,
             transfer_result_sender,
+            feedback_sender.subscribe()
         );
 
         let profile_handle = launch_profile_thread(

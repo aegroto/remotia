@@ -102,7 +102,7 @@ impl Encoder for H264RGBEncoder {
         encoded_bytes
     }
 
-    fn handle_feedback(&mut self, _message: FeedbackMessage) {
-        todo!()
+    fn handle_feedback(&mut self, message: FeedbackMessage) {
+        debug!("Feedback message: {:?}", message);
     }
 }

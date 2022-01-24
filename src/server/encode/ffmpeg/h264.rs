@@ -109,9 +109,6 @@ fn init_encoder(width: i32, height: i32, crf: u32) -> AVCodecContext {
     encode_context.set_pix_fmt(rsmpeg::ffi::AVPixelFormat_AV_PIX_FMT_YUV420P);
     let mut encode_context = unsafe {
         let raw_encode_context = encode_context.into_raw().as_ptr();
-
-        // (*raw_encode_context).bit_rate = 20000 * 1000;
-
         AVCodecContext::from_raw(NonNull::new(raw_encode_context).unwrap())
     };
 
@@ -150,12 +147,12 @@ impl Encoder for H264Encoder {
     }
 
     fn handle_feedback(&mut self, message: FeedbackMessage) {
-        info!("Feedback message: {:?}", message);
+        debug!("Feedback message: {:?}", message);
 
         match message {
             FeedbackMessage::HighFrameDelay(_) => {
                 self.state.decrease_network_stability(0.1);
-                info!("Network stability: {}", self.state.network_stability);
+                debug!("Network stability: {}", self.state.network_stability);
             }
         }
 

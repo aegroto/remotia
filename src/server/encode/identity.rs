@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+use log::debug;
+
 use crate::common::feedback::FeedbackMessage;
 
 use super::Encoder;
@@ -19,7 +21,7 @@ impl Encoder for IdentityEncoder {
         encoded_frame_length
     }
 
-    fn handle_feedback(&mut self, _message: FeedbackMessage) {
-        todo!()
+    fn handle_feedback(&mut self, message: FeedbackMessage) {
+        debug!("Feedback message: {:?}", message);
     }
 }

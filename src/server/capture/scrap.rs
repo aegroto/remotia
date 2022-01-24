@@ -1,3 +1,4 @@
+use log::debug;
 use scrap::{Capturer, Display, Frame};
 
 use core::slice;
@@ -52,6 +53,7 @@ impl FrameCapturer for ScrapFrameCapturer {
         self.capturer.height()
     }
 
-    fn handle_feedback(&mut self, _message: FeedbackMessage) {
+    fn handle_feedback(&mut self, message: FeedbackMessage) {
+        debug!("Feedback message: {:?}", message);
     }
 }

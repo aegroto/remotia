@@ -1,5 +1,6 @@
 #![allow(dead_code)]
 
+use log::debug;
 use rsmpeg::{
     avcodec::{AVCodec, AVCodecContext},
     avutil::{AVDictionary, AVFrame},
@@ -70,7 +71,7 @@ impl Encoder for H265Encoder {
         self.ffmpeg_encoding_bridge.encode_avframe(&mut self.encode_context, avframe, output_buffer)
     }
 
-    fn handle_feedback(&mut self, _message: FeedbackMessage) {
-        todo!()
+    fn handle_feedback(&mut self, message: FeedbackMessage) {
+        debug!("Feedback message: {:?}", message);
     }
 }
