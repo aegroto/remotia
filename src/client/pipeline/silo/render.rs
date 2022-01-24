@@ -5,10 +5,7 @@ use log::{debug, info, warn};
 use pixels::Pixels;
 use tokio::{sync::{broadcast, mpsc::{UnboundedReceiver, UnboundedSender}}, task::JoinHandle};
 
-use crate::{client::{
-        decode::Decoder, error::ClientError, profiling::ReceivedFrameStats,
-        utils::decoding::packed_bgr_to_packed_rgba,
-    }, common::{feedback::FeedbackMessage, helpers::silo::channel_pull}};
+use crate::{client::{decode::Decoder, error::ClientError, profiling::ReceivedFrameStats, render::Renderer, utils::decoding::packed_bgr_to_packed_rgba}, common::{feedback::FeedbackMessage, helpers::silo::channel_pull}};
 
 use super::decode::DecodeResult;
 
@@ -17,12 +14,12 @@ pub struct RenderResult {
 }
 
 pub fn launch_render_thread(
+    mut renderer: Box<dyn Renderer + Send>,
     target_fps: u32,
-    mut pixels: Pixels,
     raw_frame_buffers_sender: UnboundedSender<BytesMut>,
     mut decode_result_receiver: UnboundedReceiver<DecodeResult>,
     render_result_sender: UnboundedSender<RenderResult>,
-    _feedback_receiver: broadcast::Receiver<FeedbackMessage>,
+    mut feedback_receiver: broadcast::Receiver<FeedbackMessage>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         let target_fps = target_fps as f64;
@@ -31,12 +28,12 @@ pub fn launch_render_thread(
         let mut last_spin_time: u64 = 0;
 
         loop {
-            /*match feedback_receiver.try_recv() {
+            match feedback_receiver.try_recv() {
                 Ok(message) => { 
-                    decoder.handle_feedback(message);
+                    renderer.handle_feedback(message);
                 },
                 Err(_) => { }
-            };*/
+            };
 
             let frame_dispatch_start_time = Instant::now();
 
@@ -55,8 +52,7 @@ pub fn launch_render_thread(
                     debug!("Rendering frame with stats: {:?}", frame_stats);
 
                     let rendering_start_time = Instant::now();
-                    packed_bgr_to_packed_rgba(&raw_frame_buffer, pixels.get_frame());
-                    pixels.render().unwrap();
+                    renderer.render(&raw_frame_buffer);
                     let rendering_time = rendering_start_time.elapsed().as_millis();
 
                     let frame_delay = {

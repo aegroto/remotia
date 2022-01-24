@@ -1,7 +1,7 @@
 use std::{net::SocketAddr, str::FromStr};
 
 use clap::Parser;
-use remotia::{client::{pipeline::silo::{SiloClientConfiguration, SiloClientPipeline}, profiling::tcp::TCPClientProfiler}, common::{
+use remotia::{client::{pipeline::silo::{SiloClientConfiguration, SiloClientPipeline}, profiling::tcp::TCPClientProfiler, render::beryllium::BerylliumRenderer}, common::{
         command_line::parse_canvas_resolution_str,
         helpers::client_setup::{setup_decoder_from_name, setup_frame_receiver_by_name},
     }};
@@ -44,6 +44,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let options = Options::parse();
     let (canvas_width, canvas_height) = parse_canvas_resolution_str(&options.resolution);
 
+    let renderer = Box::new(BerylliumRenderer::new(canvas_width, canvas_height));
+
     let decoder = setup_decoder_from_name(canvas_width, canvas_height, &options.decoder_name);
     let frame_receiver = setup_frame_receiver_by_name(
         SocketAddr::from_str(&options.server_address)?,
@@ -57,10 +59,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let pipeline = SiloClientPipeline::new(SiloClientConfiguration {
         decoder,
         frame_receiver,
+        renderer,
+
         profiler,
 
-        canvas_width,
-        canvas_height,
         maximum_consecutive_connection_losses: options.maximum_consecutive_connection_losses,
         target_fps: options.target_fps,
         console_profiling: options.console_profiling,
