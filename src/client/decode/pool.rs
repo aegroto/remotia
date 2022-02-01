@@ -22,7 +22,7 @@ impl Decoder for PoolDecoder {
         input_buffer: &[u8],
         output_buffer: &mut [u8],
     ) -> Result<usize, ClientError> {
-        // debug!("{:?}", &input_buffer[0..8]);
+        debug!("{:?}", &input_buffer[0..8]);
 
         let chosen_decoder_index = input_buffer[0] as usize;
         let encoded_frame_buffer = &input_buffer[1..];

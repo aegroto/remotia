@@ -115,10 +115,11 @@ impl Encoder for PoolEncoder {
         let encoding_unit = encoding_result.encoding_unit;
 
         output_buffer.copy_from_slice(&encoding_unit.output_buffer);
+        output_buffer[0] = encoding_unit.id;
 
         self.encoding_units.push(encoding_unit);
 
-        // debug!("Encoded buffers: {} // {:?}", encoding_result.encoded_size, &output_buffer[0..8]);
+        debug!("Encoded buffers: {} // {:?}", encoding_result.encoded_size, &output_buffer[0..8]);
 
         Ok(encoding_result.encoded_size + 1)
     }
