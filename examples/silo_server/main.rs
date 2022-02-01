@@ -4,7 +4,7 @@ use clap::Parser;
 use remotia::{common::{
         command_line::parse_canvas_resolution_str,
         helpers::server_setup::{setup_encoder_by_name, setup_frame_sender_by_name},
-    }, server::{capture::scrap::ScrapFrameCapturer, pipeline::silo::{SiloServerConfiguration, SiloServerPipeline}, profiling::tcp::TCPServerProfiler}};
+    }, server::{capture::scrap::ScrapFrameCapturer, pipeline::silo::{BuffersConfig, SiloServerConfiguration, SiloServerPipeline}, profiling::tcp::TCPServerProfiler}};
 
 #[derive(Parser)]
 #[clap(version = "0.1.0", author = "Lorenzo C. <aegroto@protonmail.com>")]
@@ -59,6 +59,11 @@ async fn main() -> std::io::Result<()> {
 
         width: width as usize,
         height: height as usize,
+        maximum_preencoding_capture_delay: 5,
+        buffers_conf: BuffersConfig {
+            maximum_raw_frame_buffers: 256,
+            maximum_encoded_frame_buffers: 32,
+        },
     });
 
     pipeline.run().await;

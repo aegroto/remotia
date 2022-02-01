@@ -36,6 +36,11 @@ use clap::Parser;
 use log::{debug, error, info};
 use scrap::{Capturer, Display, Frame};
 
+pub struct BuffersConfig {
+    pub maximum_raw_frame_buffers: usize,
+    pub maximum_encoded_frame_buffers: usize
+}
+
 pub struct SiloServerConfiguration {
     pub frame_capturer: Box<dyn FrameCapturer + Send>,
     pub encoder: Box<dyn Encoder + Send>,
@@ -50,6 +55,9 @@ pub struct SiloServerConfiguration {
 
     pub width: usize,
     pub height: usize,
+
+    pub maximum_preencoding_capture_delay: u128,
+    pub buffers_conf: BuffersConfig
 }
 
 pub struct SiloServerPipeline {
@@ -64,9 +72,9 @@ impl SiloServerPipeline {
     pub async fn run(self) {
         let spin_time = (1000 / self.config.target_fps) as i64;
 
-        const MAXIMUM_CAPTURE_DELAY: u128 = 30000;
-        const MAXIMUM_RAW_FRAME_BUFFERS: usize = 1;
-        const MAXIMUM_ENCODED_FRAME_BUFFERS: usize = 16;
+        /*const MAXIMUM_CAPTURE_DELAY: u128 = 10;
+        const MAXIMUM_RAW_FRAME_BUFFERS: usize = 32;
+        const MAXIMUM_ENCODED_FRAME_BUFFERS: usize = 16;*/
 
         let raw_frame_size = self.config.width * self.config.height * 3;
         let maximum_encoded_frame_size = self.config.width * self.config.height * 3;
@@ -76,13 +84,13 @@ impl SiloServerPipeline {
         let (encoded_frame_buffers_sender, encoded_frame_buffers_receiver) =
             mpsc::unbounded_channel::<BytesMut>();
 
-        for _ in 0..MAXIMUM_RAW_FRAME_BUFFERS {
+        for _ in 0..self.config.buffers_conf.maximum_raw_frame_buffers {
             let mut buf = BytesMut::with_capacity(raw_frame_size);
             buf.resize(raw_frame_size, 0);
             raw_frame_buffers_sender.send(buf).unwrap();
         }
 
-        for _ in 0..MAXIMUM_ENCODED_FRAME_BUFFERS {
+        for _ in 0..self.config.buffers_conf.maximum_encoded_frame_buffers {
             let mut buf = BytesMut::with_capacity(maximum_encoded_frame_size);
             buf.resize(maximum_encoded_frame_size, 0);
             encoded_frame_buffers_sender.send(buf).unwrap();
@@ -115,7 +123,7 @@ impl SiloServerPipeline {
             capture_result_receiver,
             encode_result_sender,
             feedback_sender.subscribe(),
-            MAXIMUM_CAPTURE_DELAY,
+            self.config.maximum_preencoding_capture_delay,
         );
 
         let transfer_handle = launch_transfer_thread(
