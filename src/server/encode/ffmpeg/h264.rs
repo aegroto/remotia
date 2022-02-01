@@ -14,6 +14,8 @@ use rsmpeg::{
     ffi,
 };
 
+use async_trait::async_trait;
+
 use cstr::cstr;
 
 use crate::{common::feedback::FeedbackMessage, server::{encode::Encoder, error::ServerError}};
@@ -128,8 +130,9 @@ fn init_encoder(width: i32, height: i32, crf: u32) -> AVCodecContext {
     encode_context
 }
 
+#[async_trait]
 impl Encoder for H264Encoder {
-    fn encode(
+    async fn encode(
         &mut self,
         input_buffer: Bytes,
         mut output_buffer: BytesMut,

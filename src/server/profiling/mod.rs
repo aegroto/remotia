@@ -10,6 +10,8 @@ use crate::common::feedback::FeedbackMessage;
 
 use async_trait::async_trait;
 
+use super::error::ServerError;
+
 pub mod logging;
 
 pub mod tcp;

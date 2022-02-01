@@ -5,6 +5,8 @@ use log::debug;
 
 use crate::{common::feedback::FeedbackMessage, server::error::ServerError};
 
+use async_trait::async_trait;
+
 use super::Encoder;
 
 pub struct IdentityEncoder { }
@@ -15,8 +17,9 @@ impl IdentityEncoder {
     }
 }
 
+#[async_trait]
 impl Encoder for IdentityEncoder {
-    fn encode(
+    async fn encode(
         &mut self,
         input_buffer: Bytes,
         mut output_buffer: BytesMut,

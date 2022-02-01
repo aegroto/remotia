@@ -37,7 +37,7 @@ impl Decoder for PoolDecoder {
     }
 
     fn handle_feedback(&mut self, message: crate::common::feedback::FeedbackMessage) {
-        todo!()
+        debug!("Feedback message: {:?}", message);
     }
 }
 

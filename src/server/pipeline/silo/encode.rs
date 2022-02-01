@@ -13,7 +13,7 @@ use tokio::{
 
 use crate::{
     common::{feedback::FeedbackMessage, helpers::silo::channel_pull},
-    server::{encode::Encoder, profiling::TransmittedFrameStats},
+    server::{encode::Encoder, error::ServerError, profiling::TransmittedFrameStats},
 };
 
 use super::capture::CaptureResult;
@@ -48,30 +48,41 @@ pub fn launch_encode_thread(
             if capture_delay < maximum_capture_delay {
                 let mut frame_stats = capture_result.frame_stats;
 
-                let (mut encoded_frame_buffer, encoded_frame_buffer_wait_time) =
+                let (encoded_frame_buffer, encoded_frame_buffer_wait_time) =
                     pull_buffer(&mut encoded_frame_buffers_receiver).await;
 
-                let (encoded_size, encoding_time) =
-                    encode(&mut encoder, Bytes::from(raw_frame_buffer.clone()), encoded_frame_buffer.clone());
+                let (encode_call_result, encoding_time) = encode(
+                    &mut encoder,
+                    Bytes::from(raw_frame_buffer.clone()),
+                    encoded_frame_buffer.clone(),
+                ).await;
 
-                update_encoding_stats(
-                    &mut frame_stats,
-                    encoded_size,
-                    encoding_time,
-                    capture_result_wait_time,
-                    encoded_frame_buffer_wait_time,
-                    capture_delay,
-                );
+                if encode_call_result.is_ok() {
+                    let encoded_size = encode_call_result.unwrap();
 
-                let capture_timestamp = capture_result.capture_timestamp;
+                    debug!("Encoded size: {}", encoded_size);
 
-                if let ControlFlow::Break(_) = push_result(
-                    &encode_result_sender,
-                    capture_timestamp,
-                    encoded_frame_buffer,
-                    frame_stats,
-                ) {
-                    break;
+                    update_encoding_stats(
+                        &mut frame_stats,
+                        encoded_size,
+                        encoding_time,
+                        capture_result_wait_time,
+                        encoded_frame_buffer_wait_time,
+                        capture_delay,
+                    );
+
+                    let capture_timestamp = capture_result.capture_timestamp;
+
+                    if let ControlFlow::Break(_) = push_result(
+                        &encode_result_sender,
+                        capture_timestamp,
+                        encoded_frame_buffer,
+                        frame_stats,
+                    ) {
+                        break;
+                    }
+                } else {
+                    debug!("Error while encoding: {}", encode_call_result.unwrap_err())
                 }
             } else {
                 debug!("Dropping frame (capture delay: {})", capture_delay);
@@ -120,15 +131,15 @@ fn update_encoding_stats(
     frame_stats.capture_delay = capture_delay;
 }
 
-fn encode(
+async fn encode(
     encoder: &mut Box<dyn Encoder + Send>,
     raw_frame_buffer: Bytes,
     encoded_frame_buffer: BytesMut,
-) -> (usize, u128) {
+) -> (Result<usize, ServerError>, u128) {
     let encoding_start_time = Instant::now();
-    let encoded_size = encoder.encode(raw_frame_buffer, encoded_frame_buffer).unwrap();
+    let encode_call_result = encoder.encode(raw_frame_buffer, encoded_frame_buffer).await;
     let encoding_time = encoding_start_time.elapsed().as_millis();
-    (encoded_size, encoding_time)
+    (encode_call_result, encoding_time)
 }
 
 async fn pull_buffer(

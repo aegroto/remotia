@@ -4,11 +4,14 @@ use crate::common::feedback::FeedbackMessage;
 
 use super::error::ServerError;
 
+use async_trait::async_trait;
+
 pub mod identity;
 pub mod ffmpeg;
 pub mod pool;
 
+#[async_trait]
 pub trait Encoder {
-    fn encode(&mut self, input_buffer: Bytes, output_buffer: BytesMut) -> Result<usize, ServerError>;
+    async fn encode(&mut self, input_buffer: Bytes, output_buffer: BytesMut) -> Result<usize, ServerError>;
     fn handle_feedback(&mut self, message: FeedbackMessage);
 }

@@ -12,6 +12,7 @@ use rsmpeg::{
 };
 
 use cstr::cstr;
+use async_trait::async_trait;
 
 use crate::{common::feedback::FeedbackMessage, server::{encode::Encoder, error::ServerError}};
 
@@ -82,8 +83,9 @@ impl H264RGBEncoder {
     }
 }
 
+#[async_trait]
 impl Encoder for H264RGBEncoder {
-    fn encode(
+    async fn encode(
         &mut self,
         input_buffer: Bytes,
         mut output_buffer: BytesMut,
