@@ -48,6 +48,11 @@ use crate::client::utils::profilation::setup_round_stats;
 use crate::common::feedback::FeedbackMessage;
 use crate::client::profiling::ClientProfiler;
 
+pub struct BuffersConfig {
+    pub maximum_encoded_frame_buffers: usize,
+    pub maximum_raw_frame_buffers: usize
+}
+
 pub struct SiloClientConfiguration {
     pub decoder: Box<dyn Decoder + Send>,
     pub frame_receiver: Box<dyn FrameReceiver + Send>,
@@ -61,6 +66,8 @@ pub struct SiloClientConfiguration {
 
     pub console_profiling: bool,
     pub csv_profiling: bool,
+
+    pub buffers_conf: BuffersConfig
 }
 
 pub struct SiloClientPipeline {
@@ -75,8 +82,6 @@ impl SiloClientPipeline {
     pub async fn run(self) {
         info!("Starting to receive stream...");
 
-        const MAXIMUM_ENCODED_FRAME_BUFFERS: usize = 16;
-        const MAXIMUM_RAW_FRAME_BUFFERS: usize = 64;
 
         let raw_frame_size = self.config.renderer.get_buffer_size();
         let maximum_encoded_frame_size = self.config.renderer.get_buffer_size();
@@ -86,13 +91,13 @@ impl SiloClientPipeline {
         let (raw_frame_buffers_sender, raw_frame_buffers_receiver) =
             mpsc::unbounded_channel::<BytesMut>();
 
-        for _ in 0..MAXIMUM_ENCODED_FRAME_BUFFERS {
+        for _ in 0..self.config.buffers_conf.maximum_raw_frame_buffers {
             let mut buf = BytesMut::with_capacity(maximum_encoded_frame_size);
             buf.resize(maximum_encoded_frame_size, 0);
             encoded_frame_buffers_sender.send(buf).unwrap();
         }
 
-        for _ in 0..MAXIMUM_RAW_FRAME_BUFFERS {
+        for _ in 0..self.config.buffers_conf.maximum_encoded_frame_buffers {
             let mut buf = BytesMut::with_capacity(raw_frame_size);
             buf.resize(raw_frame_size, 0);
             raw_frame_buffers_sender.send(buf).unwrap();

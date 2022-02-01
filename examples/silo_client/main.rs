@@ -1,7 +1,7 @@
 use std::{net::SocketAddr, str::FromStr};
 
 use clap::Parser;
-use remotia::{client::{pipeline::silo::{SiloClientConfiguration, SiloClientPipeline}, profiling::tcp::TCPClientProfiler, render::beryllium::BerylliumRenderer}, common::{
+use remotia::{client::{pipeline::silo::{BuffersConfig, SiloClientConfiguration, SiloClientPipeline}, profiling::tcp::TCPClientProfiler, render::beryllium::BerylliumRenderer}, common::{
         command_line::parse_canvas_resolution_str,
         helpers::client_setup::{setup_decoder_from_name, setup_frame_receiver_by_name},
     }};
@@ -67,6 +67,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         target_fps: options.target_fps,
         console_profiling: options.console_profiling,
         csv_profiling: options.csv_profiling,
+
+        buffers_conf: BuffersConfig {
+            maximum_encoded_frame_buffers: 16,
+            maximum_raw_frame_buffers: 32,
+        },
     });
 
     pipeline.run().await;
