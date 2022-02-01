@@ -25,7 +25,7 @@ pub struct CommandLineServerOptions {
     csv_profiling: bool,
 
     #[clap(long, default_value = "60")]
-    target_fps: u32,
+    frames_capture_rate: u32,
 
     #[clap(long, default_value = "100")]
     latency: u64,
@@ -55,7 +55,7 @@ async fn main() -> std::io::Result<()> {
         console_profiling: options.console_profiling,
         csv_profiling: options.csv_profiling,
 
-        target_fps: options.target_fps,
+        frames_capture_rate: options.frames_capture_rate,
 
         width: width as usize,
         height: height as usize,

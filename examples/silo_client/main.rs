@@ -28,7 +28,7 @@ struct Options {
     maximum_consecutive_connection_losses: u32,
 
     #[clap(short, long, default_value = "60")]
-    target_fps: u32,
+    frames_render_rate: u32,
 
     #[clap(long)]
     console_profiling: bool,
@@ -64,7 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         profiler,
 
         maximum_consecutive_connection_losses: options.maximum_consecutive_connection_losses,
-        target_fps: options.target_fps,
+        frames_render_rate: options.frames_render_rate,
         console_profiling: options.console_profiling,
         csv_profiling: options.csv_profiling,
 

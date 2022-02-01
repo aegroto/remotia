@@ -135,10 +135,8 @@ async fn pull_raw_buffer(
 }
 
 async fn spin(spin_time: i64, last_frame_capture_time: i64) {
-    tokio::time::sleep(Duration::from_millis(
-        std::cmp::max(0, spin_time - last_frame_capture_time) as u64,
-    ))
-    .await;
+    let sleep_time = std::cmp::max(0, spin_time - last_frame_capture_time) as u64;
+    tokio::time::sleep(Duration::from_millis(sleep_time)).await;
 }
 
 fn pull_feedback(

@@ -62,7 +62,7 @@ pub struct SiloClientConfiguration {
 
     pub maximum_consecutive_connection_losses: u32,
 
-    pub target_fps: u32,
+    pub frames_render_rate: u32,
 
     pub console_profiling: bool,
     pub csv_profiling: bool,
@@ -132,7 +132,7 @@ impl SiloClientPipeline {
 
         let render_handle = launch_render_thread(
             self.config.renderer,
-            self.config.target_fps,
+            self.config.frames_render_rate,
             self.config.maximum_pre_render_frame_delay,
             raw_frame_buffers_sender,
             decode_result_receiver,
