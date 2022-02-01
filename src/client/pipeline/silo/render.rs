@@ -30,6 +30,7 @@ pub struct RenderResult {
 pub fn launch_render_thread(
     mut renderer: Box<dyn Renderer + Send>,
     target_fps: u32,
+    maximum_pre_render_frame_delay: u128,
     raw_frame_buffers_sender: UnboundedSender<BytesMut>,
     mut decode_result_receiver: UnboundedReceiver<DecodeResult>,
     render_result_sender: UnboundedSender<RenderResult>,
@@ -49,15 +50,25 @@ pub fn launch_render_thread(
                 pull_decode_results(&mut decode_result_receiver).await;
 
             if decode_result.raw_frame_buffer.is_some() {
-                if let ControlFlow::Break(_) = update_frame_buffer(
-                    decode_result,
-                    &mut frame_stats,
-                    &mut renderer,
-                    decode_result_wait_time,
-                    last_spin_time,
-                    &raw_frame_buffers_sender,
-                ) {
-                    break;
+                let pre_render_frame_delay = SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis()
+                    - frame_stats.capture_timestamp;
+
+                if pre_render_frame_delay > maximum_pre_render_frame_delay {
+                    frame_stats.error = Some(ClientError::StaleFrame);
+                } else {
+                    if let ControlFlow::Break(_) = update_frame_buffer(
+                        decode_result,
+                        &mut frame_stats,
+                        &mut renderer,
+                        decode_result_wait_time,
+                        last_spin_time,
+                        &raw_frame_buffers_sender,
+                    ) {
+                        break;
+                    }
                 }
             }
 

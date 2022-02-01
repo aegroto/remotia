@@ -1,7 +1,7 @@
-use std::{net::SocketAddr, str::FromStr};
+use std::{net::SocketAddr, str::FromStr, time::Duration};
 
 use clap::Parser;
-use remotia::{client::{decode::h264::H264Decoder, pipeline::silo::{BuffersConfig, SiloClientConfiguration, SiloClientPipeline}, profiling::tcp::TCPClientProfiler, receive::remvsp::RemVSPFrameReceiver, render::beryllium::BerylliumRenderer}, common::{
+use remotia::{client::{decode::h264::H264Decoder, pipeline::silo::{BuffersConfig, SiloClientConfiguration, SiloClientPipeline}, profiling::tcp::TCPClientProfiler, receive::remvsp::{RemVSPFrameReceiver, RemVSPFrameReceiverConfiguration}, render::beryllium::BerylliumRenderer}, common::{
         command_line::parse_canvas_resolution_str,
     }};
 
@@ -43,6 +43,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let frame_receiver = Box::new(RemVSPFrameReceiver::connect(
             i16::from_str(&options.binding_port).unwrap(),
             SocketAddr::from_str(&options.server_address)?,
+            RemVSPFrameReceiverConfiguration {
+                delayable_threshold: 300,
+                frame_pull_interval: Duration::from_millis(30),
+                ..Default::default()
+            }
         ).await);
 
     let profiler = Box::new(TCPClientProfiler::connect().await);
@@ -60,9 +65,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         csv_profiling: options.csv_profiling,
 
         buffers_conf: BuffersConfig {
-            maximum_encoded_frame_buffers: 16,
-            maximum_raw_frame_buffers: 32,
+            maximum_encoded_frame_buffers: 32,
+            maximum_raw_frame_buffers: 33,
         },
+        maximum_pre_render_frame_delay: 100,
     });
 
     pipeline.run().await;

@@ -67,6 +67,7 @@ pub struct SiloClientConfiguration {
     pub console_profiling: bool,
     pub csv_profiling: bool,
 
+    pub maximum_pre_render_frame_delay: u128,
     pub buffers_conf: BuffersConfig
 }
 
@@ -132,6 +133,7 @@ impl SiloClientPipeline {
         let render_handle = launch_render_thread(
             self.config.renderer,
             self.config.target_fps,
+            self.config.maximum_pre_render_frame_delay,
             raw_frame_buffers_sender,
             decode_result_receiver,
             render_result_sender,
