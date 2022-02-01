@@ -118,7 +118,9 @@ impl Encoder for PoolEncoder {
 
         self.encoding_units.push(encoding_unit);
 
-        Ok(encoding_result.encoded_size)
+        // debug!("Encoded buffers: {} // {:?}", encoding_result.encoded_size, &output_buffer[0..8]);
+
+        Ok(encoding_result.encoded_size + 1)
     }
 
     fn handle_feedback(&mut self, message: FeedbackMessage) {

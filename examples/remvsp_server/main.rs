@@ -41,9 +41,9 @@ async fn main() -> std::io::Result<()> {
         buffer_size,
         vec![
             Box::new(H264Encoder::new(buffer_size, width as i32, height as i32)),
+            /*Box::new(H264Encoder::new(buffer_size, width as i32, height as i32)),
             Box::new(H264Encoder::new(buffer_size, width as i32, height as i32)),
-            Box::new(H264Encoder::new(buffer_size, width as i32, height as i32)),
-            Box::new(H264Encoder::new(buffer_size, width as i32, height as i32)),
+            Box::new(H264Encoder::new(buffer_size, width as i32, height as i32)),*/
         ]
     ));
 

@@ -43,9 +43,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let decoder = Box::new(PoolDecoder::new(
         vec![
             Box::new(H264Decoder::new()),
+            /*Box::new(H264Decoder::new()),
             Box::new(H264Decoder::new()),
-            Box::new(H264Decoder::new()),
-            Box::new(H264Decoder::new())
+            Box::new(H264Decoder::new())*/
         ]
     ));
 
