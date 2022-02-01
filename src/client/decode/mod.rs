@@ -6,6 +6,7 @@ pub mod identity;
 pub mod h264;
 pub mod h264rgb;
 pub mod h265;
+pub mod pool;
 
 mod utils;
 

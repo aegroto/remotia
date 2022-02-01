@@ -4,5 +4,11 @@ use thiserror::Error;
 pub enum ServerError {
     #[error("Timeout")]
     Timeout,
+
+    #[error("NoEncodedFrames")]
+    NoEncodedFrames,
+
+    #[error("NoAvailableEncoders")]
+    NoAvailableEncoders,
 }
 

@@ -1,6 +1,6 @@
 use std::{ops::ControlFlow, sync::Arc, time::Instant};
 
-use bytes::BytesMut;
+use bytes::{Bytes, BytesMut};
 use log::{debug, info, warn};
 use object_pool::{Pool, Reusable};
 use tokio::{
@@ -52,7 +52,7 @@ pub fn launch_encode_thread(
                     pull_buffer(&mut encoded_frame_buffers_receiver).await;
 
                 let (encoded_size, encoding_time) =
-                    encode(&mut encoder, &raw_frame_buffer, &mut encoded_frame_buffer);
+                    encode(&mut encoder, Bytes::from(raw_frame_buffer.clone()), encoded_frame_buffer.clone());
 
                 update_encoding_stats(
                     &mut frame_stats,
@@ -122,11 +122,11 @@ fn update_encoding_stats(
 
 fn encode(
     encoder: &mut Box<dyn Encoder + Send>,
-    raw_frame_buffer: &BytesMut,
-    encoded_frame_buffer: &mut BytesMut,
+    raw_frame_buffer: Bytes,
+    encoded_frame_buffer: BytesMut,
 ) -> (usize, u128) {
     let encoding_start_time = Instant::now();
-    let encoded_size = encoder.encode(raw_frame_buffer, encoded_frame_buffer);
+    let encoded_size = encoder.encode(raw_frame_buffer, encoded_frame_buffer).unwrap();
     let encoding_time = encoding_start_time.elapsed().as_millis();
     (encoded_size, encoding_time)
 }
