@@ -88,7 +88,7 @@ impl Encoder for H264RGBEncoder {
     async fn encode(
         &mut self,
         input_buffer: Bytes,
-        mut output_buffer: BytesMut,
+        mut output_buffer: &mut BytesMut,
     ) -> Result<usize, ServerError> {
         let key_frame = self.state.encoded_frames % 4 == 0;
 

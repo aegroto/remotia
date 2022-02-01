@@ -68,7 +68,7 @@ impl Encoder for H265Encoder {
     async fn encode(
         &mut self,
         input_buffer: Bytes,
-        mut output_buffer: BytesMut,
+        mut output_buffer: &mut BytesMut,
     ) -> Result<usize, ServerError> {
         let avframe = self.yuv420_avframe_builder.create_avframe(
             &mut self.encode_context,

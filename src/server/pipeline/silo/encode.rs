@@ -48,13 +48,13 @@ pub fn launch_encode_thread(
             if capture_delay < maximum_capture_delay {
                 let mut frame_stats = capture_result.frame_stats;
 
-                let (encoded_frame_buffer, encoded_frame_buffer_wait_time) =
+                let (mut encoded_frame_buffer, encoded_frame_buffer_wait_time) =
                     pull_buffer(&mut encoded_frame_buffers_receiver).await;
 
                 let (encode_call_result, encoding_time) = encode(
                     &mut encoder,
                     Bytes::from(raw_frame_buffer.clone()),
-                    encoded_frame_buffer.clone(),
+                    &mut encoded_frame_buffer,
                 ).await;
 
                 if encode_call_result.is_ok() {
@@ -134,7 +134,7 @@ fn update_encoding_stats(
 async fn encode(
     encoder: &mut Box<dyn Encoder + Send>,
     raw_frame_buffer: Bytes,
-    encoded_frame_buffer: BytesMut,
+    encoded_frame_buffer: &mut BytesMut,
 ) -> (Result<usize, ServerError>, u128) {
     let encoding_start_time = Instant::now();
     let encode_call_result = encoder.encode(raw_frame_buffer, encoded_frame_buffer).await;

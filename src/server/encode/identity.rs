@@ -22,7 +22,7 @@ impl Encoder for IdentityEncoder {
     async fn encode(
         &mut self,
         input_buffer: Bytes,
-        mut output_buffer: BytesMut,
+        output_buffer: &mut BytesMut,
     ) -> Result<usize, ServerError> {
         let encoded_frame_length = input_buffer.len();
         output_buffer.copy_from_slice(&input_buffer);

@@ -36,13 +36,14 @@ async fn main() -> std::io::Result<()> {
     let (width, height) = parse_canvas_resolution_str(&options.resolution);
 
     let profiler = Box::new(TCPServerProfiler::connect());
-
+    let buffer_size = (width * height * 4) as usize;
     let encoder = Box::new(PoolEncoder::new(
+        buffer_size,
         vec![
-            Box::new(H264Encoder::new((width * height * 4) as usize, width as i32, height as i32)),
-            Box::new(H264Encoder::new((width * height * 4) as usize, width as i32, height as i32)),
-            Box::new(H264Encoder::new((width * height * 4) as usize, width as i32, height as i32)),
-            Box::new(H264Encoder::new((width * height * 4) as usize, width as i32, height as i32)),
+            Box::new(H264Encoder::new(buffer_size, width as i32, height as i32)),
+            Box::new(H264Encoder::new(buffer_size, width as i32, height as i32)),
+            Box::new(H264Encoder::new(buffer_size, width as i32, height as i32)),
+            Box::new(H264Encoder::new(buffer_size, width as i32, height as i32)),
         ]
     ));
 

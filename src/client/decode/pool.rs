@@ -5,16 +5,14 @@ use crate::client::error::ClientError;
 use super::Decoder;
 
 pub struct PoolDecoder {
-    decoders: Vec<Box<dyn Decoder>>
+    decoders: Vec<Box<dyn Decoder>>,
 }
 
-unsafe impl Send for PoolDecoder { }
+unsafe impl Send for PoolDecoder {}
 
 impl PoolDecoder {
     pub fn new(decoders: Vec<Box<dyn Decoder>>) -> Self {
-        Self {
-            decoders
-        }
+        Self { decoders }
     }
 }
 
@@ -25,13 +23,17 @@ impl Decoder for PoolDecoder {
         output_buffer: &mut [u8],
     ) -> Result<usize, ClientError> {
         let chosen_decoder_index = input_buffer[0] as usize;
-        let encoded_frame = &input_buffer[1..];
+        let encoded_frame_buffer = &input_buffer[1..];
 
-        debug!("Decoding with decoder #{}...", chosen_decoder_index);
+        debug!(
+            "Decoding {} bytes with decoder #{}...",
+            encoded_frame_buffer.len(),
+            chosen_decoder_index
+        );
 
         let chosen_decoder = &mut self.decoders[chosen_decoder_index];
 
-        let result = chosen_decoder.decode(encoded_frame, output_buffer);
+        let result = chosen_decoder.decode(encoded_frame_buffer, output_buffer);
 
         result
     }
@@ -40,4 +42,3 @@ impl Decoder for PoolDecoder {
         debug!("Feedback message: {:?}", message);
     }
 }
-

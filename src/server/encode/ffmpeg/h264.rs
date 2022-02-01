@@ -135,7 +135,7 @@ impl Encoder for H264Encoder {
     async fn encode(
         &mut self,
         input_buffer: Bytes,
-        mut output_buffer: BytesMut,
+        mut output_buffer: &mut BytesMut,
     ) -> Result<usize, ServerError> {
         self.perform_quality_increase();
 
