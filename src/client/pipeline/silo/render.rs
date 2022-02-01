@@ -191,6 +191,7 @@ fn recalculate_fps(current_fps: f64, target_fps: f64, frame_error: Option<&Clien
     if let Some(error) = frame_error {
         match error {
             ClientError::Timeout => current_fps * 0.6,
+            ClientError::NoCompleteFrames => current_fps - (target_fps * 0.01),
             _ => current_fps,
         }
     } else {
