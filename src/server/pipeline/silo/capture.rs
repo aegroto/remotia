@@ -118,10 +118,8 @@ fn capture(
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_millis();
-    let result = frame_capturer.capture();
+    frame_capturer.capture(raw_frame_buffer).unwrap();
     debug!("Frame captured");
-    let packed_bgra_frame_buffer = result.unwrap();
-    packed_bgra_to_packed_bgr(&packed_bgra_frame_buffer, raw_frame_buffer);
     (capture_start_time, capture_timestamp)
 }
 

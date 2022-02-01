@@ -58,7 +58,7 @@ async fn main() -> std::io::Result<()> {
         height: height as usize,
         maximum_preencoding_capture_delay: 5,
         buffers_conf: BuffersConfig {
-            maximum_raw_frame_buffers: 1024,
+            maximum_raw_frame_buffers: 2,
             maximum_encoded_frame_buffers: 256,
         },
     });

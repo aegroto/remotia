@@ -72,12 +72,8 @@ impl SiloServerPipeline {
     pub async fn run(self) {
         let spin_time = (1000 / self.config.frames_capture_rate) as i64;
 
-        /*const MAXIMUM_CAPTURE_DELAY: u128 = 10;
-        const MAXIMUM_RAW_FRAME_BUFFERS: usize = 32;
-        const MAXIMUM_ENCODED_FRAME_BUFFERS: usize = 16;*/
-
-        let raw_frame_size = self.config.width * self.config.height * 3;
-        let maximum_encoded_frame_size = self.config.width * self.config.height * 3;
+        let raw_frame_size = self.config.width * self.config.height * 4;
+        let maximum_encoded_frame_size = self.config.width * self.config.height * 4;
 
         let (raw_frame_buffers_sender, raw_frame_buffers_receiver) =
             mpsc::unbounded_channel::<BytesMut>();
