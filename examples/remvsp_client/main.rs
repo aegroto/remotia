@@ -68,7 +68,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             maximum_encoded_frame_buffers: 32,
             maximum_raw_frame_buffers: 33,
         },
-        maximum_pre_render_frame_delay: 100,
+        maximum_pre_render_frame_delay: 2000,
     });
 
     pipeline.run().await;
