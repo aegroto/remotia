@@ -53,7 +53,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             i16::from_str(&options.binding_port).unwrap(),
             SocketAddr::from_str(&options.server_address)?,
             RemVSPFrameReceiverConfiguration {
-                delayable_threshold: 300,
+                delayable_threshold: 100,
                 frame_pull_interval: Duration::from_millis(30),
                 ..Default::default()
             }
@@ -75,9 +75,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         buffers_conf: BuffersConfig {
             maximum_encoded_frame_buffers: 32,
-            maximum_raw_frame_buffers: 33,
+            maximum_raw_frame_buffers: 32,
         },
-        maximum_pre_render_frame_delay: 10000,
+        maximum_pre_render_frame_delay: 250,
     });
 
     pipeline.run().await;
