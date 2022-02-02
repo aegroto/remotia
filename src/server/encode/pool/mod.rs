@@ -5,7 +5,7 @@ use std::sync::Arc;
 use bytes::{Bytes, BytesMut};
 use log::debug;
 use tokio::sync::{
-    mpsc::{self, UnboundedReceiver, UnboundedSender},
+    mpsc::{self, error::TryRecvError, UnboundedReceiver, UnboundedSender},
     Mutex,
 };
 
@@ -63,26 +63,10 @@ impl PoolEncoder {
             encoded_frames_receiver,
         }
     }
-}
 
-#[async_trait]
-impl Encoder for PoolEncoder {
-    async fn encode(
-        &mut self,
-        input_buffer: Bytes,
-        output_buffer: &mut BytesMut,
-    ) -> Result<usize, ServerError> {
-        // Push
-        let chosen_encoding_unit = self.encoding_units.pop();
-
-        if chosen_encoding_unit.is_none() {
-            return Err(ServerError::NoAvailableEncoders);
-        }
-
-        let mut chosen_encoding_unit = chosen_encoding_unit.unwrap();
-
+    fn push_to_unit(&mut self, input_buffer: Bytes, mut chosen_encoding_unit: EncodingUnit) {
         let encoder_id = chosen_encoding_unit.id;
-        debug!("Encoding with encoder #{}...", encoder_id);
+        debug!("Pushing to encoder #{}...", encoder_id);
 
         let result_sender = self.encoded_frames_sender.clone();
 
@@ -99,6 +83,8 @@ impl Encoder for PoolEncoder {
                 .output_buffer
                 .unsplit(encoded_frame_buffer);
 
+            debug!("Sending encoder #{} result...", chosen_encoding_unit.id);
+
             let send_result = result_sender.send(EncodingResult {
                 encoding_unit: chosen_encoding_unit,
                 encoded_size,
@@ -108,18 +94,49 @@ impl Encoder for PoolEncoder {
                 panic!("Unhandled pool encoder result channel error on send");
             }
         });
+    }
+}
+
+#[async_trait]
+impl Encoder for PoolEncoder {
+    async fn encode(
+        &mut self,
+        input_buffer: Bytes,
+        output_buffer: &mut BytesMut,
+    ) -> Result<usize, ServerError> {
+        // Push
+        let chosen_encoding_unit = self.encoding_units.pop();
+        let available_encoders = chosen_encoding_unit.is_some();
+
+        if available_encoders {
+            let chosen_encoding_unit = chosen_encoding_unit.unwrap();
+            self.push_to_unit(input_buffer, chosen_encoding_unit);
+        }
 
         // Pull
+        let encoding_result;
 
-        let encoding_result = self.encoded_frames_receiver.recv().await.unwrap();
+        if available_encoders {
+            let pull_result = self.encoded_frames_receiver.try_recv();
+
+            if let Err(TryRecvError::Empty) = pull_result {
+                debug!("No encoding results");
+                return Err(ServerError::NoEncodedFrames);
+            }
+
+            encoding_result = pull_result.unwrap();
+        } else {
+            let pull_result = self.encoded_frames_receiver.recv().await;
+
+            encoding_result = pull_result.unwrap();
+        }
+
         let encoding_unit = encoding_result.encoding_unit;
 
         output_buffer.copy_from_slice(&encoding_unit.output_buffer);
         output_buffer[0] = encoding_unit.id;
 
         self.encoding_units.push(encoding_unit);
-
-        debug!("Encoded buffers: {} // {:?}", encoding_result.encoded_size, &output_buffer[0..8]);
 
         Ok(encoding_result.encoded_size + 1)
     }
