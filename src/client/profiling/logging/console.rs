@@ -55,11 +55,6 @@ impl ReceptionRoundLogger for ReceptionRoundConsoleLogger {
             .filter(|frame| is_error_of_type!(&frame.error, ClientError::NoCompleteFrames))
             .count());
 
-        info!("No decoded frames: {}", profiled_frames
-            .iter()
-            .filter(|frame| is_error_of_type!(&frame.error, ClientError::NoDecodedFrames))
-            .count());
-
         info!("Stale frames: {}", profiled_frames
             .iter()
             .filter(|frame| is_error_of_type!(&frame.error, ClientError::StaleFrame))

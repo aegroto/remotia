@@ -1,6 +1,5 @@
 use std::slice;
 
-use bytes::{Bytes, BytesMut};
 use log::debug;
 use rsmpeg::{
     avcodec::{AVCodec, AVCodecContext, AVCodecParserContext, AVPacket},
@@ -45,8 +44,8 @@ impl H264RGBDecoder {
 impl Decoder for H264RGBDecoder {
     async fn decode(
         &mut self,
-        input_buffer: Bytes,
-        output_buffer: &mut BytesMut,
+        input_buffer: &[u8],
+        output_buffer: &mut [u8],
     ) -> Result<usize, ClientError> {
         let mut packet = AVPacket::new();
 

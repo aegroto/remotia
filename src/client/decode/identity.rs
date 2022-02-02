@@ -1,4 +1,3 @@
-use bytes::{Bytes, BytesMut};
 use log::debug;
 
 use crate::{client::error::ClientError, common::feedback::FeedbackMessage};
@@ -25,10 +24,10 @@ impl IdentityDecoder {
 impl Decoder for IdentityDecoder {
     async fn decode(
         &mut self,
-        input_buffer: Bytes,
-        output_buffer: &mut BytesMut,
+        input_buffer: &[u8],
+        output_buffer: &mut [u8],
     ) -> Result<usize, ClientError> {
-        output_buffer.copy_from_slice(&input_buffer);
+        output_buffer.copy_from_slice(input_buffer);
 
         Ok(output_buffer.len())
     }
