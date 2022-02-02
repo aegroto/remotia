@@ -1,23 +1,25 @@
 use log::debug;
 
 use crate::client::error::ClientError;
+use async_trait::async_trait;
 
 use super::Decoder;
 
 pub struct PoolDecoder {
-    decoders: Vec<Box<dyn Decoder>>,
+    decoders: Vec<Box<dyn Decoder + Send>>,
 }
 
 unsafe impl Send for PoolDecoder {}
 
 impl PoolDecoder {
-    pub fn new(decoders: Vec<Box<dyn Decoder>>) -> Self {
+    pub fn new(decoders: Vec<Box<dyn Decoder + Send>>) -> Self {
         Self { decoders }
     }
 }
 
+#[async_trait]
 impl Decoder for PoolDecoder {
-    fn decode(
+    async fn decode(
         &mut self,
         input_buffer: &[u8],
         output_buffer: &mut [u8],
@@ -35,7 +37,7 @@ impl Decoder for PoolDecoder {
 
         let chosen_decoder = &mut self.decoders[chosen_decoder_index];
 
-        let result = chosen_decoder.decode(encoded_frame_buffer, output_buffer);
+        let result = chosen_decoder.decode(encoded_frame_buffer, output_buffer).await;
 
         result
     }
