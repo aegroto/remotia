@@ -41,9 +41,9 @@ async fn main() -> std::io::Result<()> {
         buffer_size,
         vec![
             Box::new(H264Encoder::new(buffer_size, width as i32, height as i32)),
-            // Box::new(H264Encoder::new(buffer_size, width as i32, height as i32)),
-            // Box::new(H264Encoder::new(buffer_size, width as i32, height as i32)),
-            // Box::new(H264Encoder::new(buffer_size, width as i32, height as i32)),
+            Box::new(H264Encoder::new(buffer_size, width as i32, height as i32)),
+            Box::new(H264Encoder::new(buffer_size, width as i32, height as i32)),
+            Box::new(H264Encoder::new(buffer_size, width as i32, height as i32)),
         ]
     ));
 
@@ -66,9 +66,9 @@ async fn main() -> std::io::Result<()> {
 
         width: width as usize,
         height: height as usize,
-        maximum_preencoding_capture_delay: 5,
+        maximum_preencoding_capture_delay: 3,
         buffers_conf: BuffersConfig {
-            maximum_raw_frame_buffers: 2,
+            maximum_raw_frame_buffers: 8,
             maximum_encoded_frame_buffers: 256,
         },
     });
