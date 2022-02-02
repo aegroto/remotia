@@ -1,5 +1,6 @@
 use std::slice;
 
+use bytes::{Bytes, BytesMut};
 use log::debug;
 use rsmpeg::{
     avcodec::{AVCodec, AVCodecContext, AVCodecParserContext, AVPacket},
@@ -105,10 +106,10 @@ impl H264Decoder {
 impl Decoder for H264Decoder {
     async fn decode(
         &mut self,
-        input_buffer: &[u8],
-        output_buffer: &mut [u8],
+        input_buffer: Bytes,
+        output_buffer: &mut BytesMut,
     ) -> Result<usize, ClientError> {
-        if let Some(error) = self.parse_packets(input_buffer) {
+        if let Some(error) = self.parse_packets(&input_buffer) {
             return Err(error);
         }
 

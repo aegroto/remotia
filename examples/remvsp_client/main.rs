@@ -40,7 +40,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let renderer = Box::new(BerylliumRenderer::new(canvas_width, canvas_height));
 
+    let buffer_size = (canvas_width * canvas_height * 3) as usize;
     let decoder = Box::new(PoolDecoder::new(
+        buffer_size,
         vec![
             Box::new(H264Decoder::new()),
             Box::new(H264Decoder::new()),

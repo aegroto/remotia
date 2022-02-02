@@ -1,6 +1,6 @@
 use std::{ops::ControlFlow, time::Instant};
 
-use bytes::BytesMut;
+use bytes::{Bytes, BytesMut};
 use log::{debug, warn};
 use tokio::{
     sync::{
@@ -133,12 +133,19 @@ async fn decode(
     frame_stats: &mut ReceivedFrameStats,
 ) -> u128 {
     debug!("Sending the encoded frame to the decoder...");
+
+    let input_slice = &encoded_frame_buffer[..received_frame.buffer_size];
+    let mut input_buffer = BytesMut::new();
+    input_buffer.extend_from_slice(input_slice);
+    let input_buffer = input_buffer.freeze();
+
     let decoding_start_time = Instant::now();
     let decoder_result = decoder.decode(
-        &encoded_frame_buffer[..received_frame.buffer_size],
+        input_buffer,
         raw_frame_buffer,
     ).await;
     let decoding_time = decoding_start_time.elapsed().as_millis();
+    
     if decoder_result.is_err() {
         frame_stats.error = Some(decoder_result.unwrap_err());
         debug!("Decode error: {:?}", frame_stats.error);
