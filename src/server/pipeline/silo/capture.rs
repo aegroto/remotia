@@ -18,18 +18,14 @@ use tokio::{
 
 use crate::{
     common::{feedback::FeedbackMessage, helpers::silo::channel_pull},
-    server::{
-        capture::FrameCapturer, profiling::TransmittedFrameStats,
-        utils::encoding::packed_bgra_to_packed_bgr,
-    },
+    server::capture::FrameCapturer,
 };
 
-pub struct CaptureResult {
-    pub capture_timestamp: u128,
-    pub capture_time: Instant,
+use super::types::ServerFrameData;
 
-    pub raw_frame_buffer: BytesMut,
-    pub frame_stats: TransmittedFrameStats,
+pub struct CaptureResult {
+    pub capture_time: Instant,
+    pub frame_data: ServerFrameData,
 }
 
 pub fn launch_capture_thread(
@@ -53,19 +49,19 @@ pub fn launch_capture_thread(
             let (capture_start_time, capture_timestamp) =
                 capture(&mut frame_capturer, &mut raw_frame_buffer);
 
-            let frame_stats = initialize_frame_stats(
-                &mut last_frame_capture_time,
-                capture_start_time,
-                capture_timestamp,
-                raw_frame_buffer_wait_time,
-            );
+            let mut frame_data = ServerFrameData::default();
+            last_frame_capture_time = capture_start_time.elapsed().as_millis() as i64;
+
+            frame_data.set("capture_timestamp", capture_timestamp);
+            frame_data.set_local("capturer_idle_time", raw_frame_buffer_wait_time);
+            frame_data.insert_writable_buffer("raw_frame_buffer", raw_frame_buffer);
 
             if let ControlFlow::Break(_) = push_result(
                 &capture_result_sender,
-                capture_timestamp,
-                capture_start_time,
-                raw_frame_buffer,
-                frame_stats,
+                CaptureResult {
+                    capture_time: capture_start_time,
+                    frame_data,
+                },
             ) {
                 break;
             }
@@ -75,37 +71,14 @@ pub fn launch_capture_thread(
 
 fn push_result(
     capture_result_sender: &UnboundedSender<CaptureResult>,
-    capture_timestamp: u128,
-    capture_start_time: Instant,
-    raw_frame_buffer: BytesMut,
-    frame_stats: TransmittedFrameStats,
+    result: CaptureResult,
 ) -> ControlFlow<()> {
-    let send_result = capture_result_sender.send(CaptureResult {
-        capture_timestamp,
-        capture_time: capture_start_time,
-        raw_frame_buffer,
-        frame_stats,
-    });
+    let send_result = capture_result_sender.send(result);
     if let Err(e) = send_result {
         warn!("Capture result send error: {}", e);
         return ControlFlow::Break(());
     };
     ControlFlow::Continue(())
-}
-
-fn initialize_frame_stats(
-    last_frame_capture_time: &mut i64,
-    capture_start_time: Instant,
-    capture_timestamp: u128,
-    raw_frame_buffer_wait_time: u128,
-) -> TransmittedFrameStats {
-    let mut frame_stats = TransmittedFrameStats::default();
-    *last_frame_capture_time = capture_start_time.elapsed().as_millis() as i64;
-
-    frame_stats.capture_timestamp = capture_timestamp;
-    frame_stats.capture_time = *last_frame_capture_time as u128;
-    frame_stats.capturer_idle_time = raw_frame_buffer_wait_time;
-    frame_stats
 }
 
 fn capture(

@@ -35,8 +35,8 @@ pub fn launch_profile_thread(
             let (transfer_result, total_time) =
                 pull_transfer_result(&mut transfer_result_receiver).await;
 
-            let mut frame_stats = transfer_result.frame_stats;
-            frame_stats.total_time = total_time;
+            let mut frame_data = transfer_result.frame_data;
+            frame_data.set_local("total_time", total_time);
 
             profile(&mut round_stats, frame_stats, round_duration);
 
