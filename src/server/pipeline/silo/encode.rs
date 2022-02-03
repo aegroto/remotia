@@ -39,9 +39,7 @@ pub fn launch_encode_thread(
                 pull_capture_result(&mut capture_result_receiver).await;
 
             let capture_delay = capture_result.capture_time.elapsed().as_millis();
-            let frame_data = capture_result.frame_data;
-
-            let capture_timestamp = frame_data.get("capture_timestamp");
+            let mut frame_data = capture_result.frame_data;
 
             let raw_frame_buffer = frame_data.extract_writable_buffer("raw_frame_buffer");
 

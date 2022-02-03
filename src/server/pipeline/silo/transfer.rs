@@ -18,7 +18,7 @@ use super::encode::EncodeResult;
 use super::types::ServerFrameData;
 
 pub struct TransferResult {
-    frame_data: ServerFrameData,
+    pub frame_data: ServerFrameData,
 }
 
 pub fn launch_transfer_thread(
@@ -35,7 +35,7 @@ pub fn launch_transfer_thread(
             let (encode_result, encode_result_wait_time) =
                 pull_encode_result(&mut encode_result_receiver).await;
 
-            let frame_data = encode_result.frame_data;
+            let mut frame_data = encode_result.frame_data;
 
             let encoded_frame_buffer = frame_data.extract_writable_buffer("encoded_frame_buffer");
             let encoded_size = frame_data.get("encoded_size") as usize;

@@ -38,9 +38,8 @@ pub fn launch_profile_thread(
             let mut frame_data = transfer_result.frame_data;
             frame_data.set_local("total_time", total_time);
 
-            profile(&mut round_stats, frame_stats, round_duration);
-
-            broadcast_feedbacks(&mut profiler, &feedback_sender).await;
+            // profile(&mut round_stats, frame_stats, round_duration);
+            // broadcast_feedbacks(&mut profiler, &feedback_sender).await;
         }
     })
 }
