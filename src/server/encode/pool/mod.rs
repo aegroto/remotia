@@ -182,6 +182,10 @@ impl Encoder for PoolEncoder {
             .extract_writable_buffer("encoded_frame_buffer")
             .unwrap();
 
+        // Copy the just pulled frame data in the new DTO
+        frame_data.set("capture_timestamp", local_frame_data.get("capture_timestamp"));
+        frame_data.set_local("capture_time", local_frame_data.get_local("capture_time"));
+
         self.encoding_units.push(encoding_unit);
 
         frame_data.insert_writable_buffer("encoded_frame_buffer", encoded_frame_buffer);

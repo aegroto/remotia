@@ -54,7 +54,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             SocketAddr::from_str(&options.server_address)?,
             RemVSPFrameReceiverConfiguration {
                 delayable_threshold: 100,
-                frame_pull_interval: Duration::from_millis(30),
+                frame_pull_interval: Duration::from_millis(10),
                 ..Default::default()
             }
         ).await);
