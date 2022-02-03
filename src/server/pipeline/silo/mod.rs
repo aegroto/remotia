@@ -5,6 +5,8 @@ mod encode;
 mod profile;
 mod transfer;
 
+mod utils;
+
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 

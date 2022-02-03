@@ -15,6 +15,7 @@ use crate::server::send::FrameSender;
 use crate::server::types::ServerFrameData;
 
 use super::encode::EncodeResult;
+use super::utils::return_writable_buffer;
 
 pub struct TransferResult {
     pub frame_data: ServerFrameData,
@@ -36,11 +37,10 @@ pub fn launch_transfer_thread(
 
             let mut frame_data = encode_result.frame_data;
 
-            let encoded_frame_buffer = frame_data.extract_writable_buffer("encoded_frame_buffer");
-            let encoded_size = frame_data.get("encoded_size") as usize;
-
             if frame_data.get_error().is_none() {
                 let capture_timestamp = frame_data.get("capture_timestamp");
+                let encoded_size = frame_data.get("encoded_size") as usize;
+                let encoded_frame_buffer = frame_data.get_writable_buffer_ref("encoded_frame_buffer").unwrap();
 
                 let (transfer_start_time, transmitted_bytes) = transfer(
                     &mut frame_sender,
@@ -57,7 +57,11 @@ pub fn launch_transfer_thread(
                 debug!("Error on encoded frame: {:?}", frame_data.get_error());
             }
 
-            return_buffer(&encoded_frame_buffers_sender, encoded_frame_buffer);
+            return_writable_buffer(
+                &encoded_frame_buffers_sender,
+                &mut frame_data,
+                "encoded_frame_buffer",
+            );
 
             let send_result = transfer_result_sender.send(TransferResult { frame_data });
             if let Err(_) = send_result {
@@ -66,16 +70,6 @@ pub fn launch_transfer_thread(
             };
         }
     })
-}
-
-fn return_buffer(
-    encoded_frame_buffers_sender: &UnboundedSender<BytesMut>,
-    encoded_frame_buffer: BytesMut,
-) {
-    debug!("Returning empty encoded frame buffer...");
-    encoded_frame_buffers_sender
-        .send(encoded_frame_buffer)
-        .expect("Encoded frame buffer return error");
 }
 
 async fn transfer(

@@ -13,7 +13,7 @@ pub struct ServerFrameData {
     stats: HashMap<String, u128>,
     local_stats: HashMap<String, u128>,
 
-    error: Option<ServerError>
+    error: Option<ServerError>,
 }
 
 impl ServerFrameData {
@@ -22,7 +22,7 @@ impl ServerFrameData {
     }
 
     pub fn get(&self, key: &str) -> u128 {
-        *self.stats.get(key).expect("Missing key")
+        *self.stats.get(key).expect(&missing_key_msg(key))
     }
 
     pub fn has(&self, key: &str) -> bool {
@@ -45,8 +45,13 @@ impl ServerFrameData {
         self.readonly_buffers.insert(key.to_string(), buffer);
     }
 
-    pub fn extract_readonly_buffer(&mut self, key: &str) -> Bytes {
-        self.readonly_buffers.remove(key).expect(&missing_key_msg(key))
+    pub fn extract_readonly_buffer(&mut self, key: &str) -> Option<Bytes> {
+        self.readonly_buffers
+            .remove(key)
+    }
+
+    pub fn has_readonly_buffer(&self, key: &str) -> bool {
+        self.readonly_buffers.contains_key(key)
     }
 
     pub fn get_readonly_buffer_ref(&mut self, key: &str) -> &Bytes {
@@ -57,12 +62,18 @@ impl ServerFrameData {
         self.writable_buffers.insert(key.to_string(), buffer);
     }
 
-    pub fn extract_writable_buffer(&mut self, key: &str) -> BytesMut {
-        self.writable_buffers.remove(key).expect(&missing_key_msg(key))
+    pub fn extract_writable_buffer(&mut self, key: &str) -> Option<BytesMut> {
+        self.writable_buffers
+            .remove(key)
     }
 
-    pub fn get_writable_buffer_ref(&mut self, key: &str) -> &mut BytesMut {
-        self.writable_buffers.get_mut(key).expect(&missing_key_msg(key))
+    pub fn get_writable_buffer_ref(&mut self, key: &str) -> Option<&mut BytesMut> {
+        self.writable_buffers
+            .get_mut(key)
+    }
+    
+    pub fn has_writable_buffer(&self, key: &str) -> bool {
+        self.writable_buffers.contains_key(key)
     }
 
     pub fn set_error(&mut self, error: Option<ServerError>) {

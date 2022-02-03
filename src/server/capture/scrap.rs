@@ -35,6 +35,7 @@ impl FrameCapturer for ScrapFrameCapturer {
                 let frame_slice = unsafe { slice::from_raw_parts(buffer.as_ptr(), buffer.len()) };
                 frame_data
                     .get_writable_buffer_ref("raw_frame_buffer")
+                    .unwrap()
                     .copy_from_slice(frame_slice);
             }
             Err(error) => {
