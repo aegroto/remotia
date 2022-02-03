@@ -49,12 +49,20 @@ impl ServerFrameData {
         self.readonly_buffers.remove(key).expect(&missing_key_msg(key))
     }
 
+    pub fn get_readonly_buffer_ref(&mut self, key: &str) -> &Bytes {
+        self.readonly_buffers.get(key).expect(&missing_key_msg(key))
+    }
+
     pub fn insert_writable_buffer(&mut self, key: &str, buffer: BytesMut) {
         self.writable_buffers.insert(key.to_string(), buffer);
     }
 
     pub fn extract_writable_buffer(&mut self, key: &str) -> BytesMut {
         self.writable_buffers.remove(key).expect(&missing_key_msg(key))
+    }
+
+    pub fn get_writable_buffer_ref(&mut self, key: &str) -> &mut BytesMut {
+        self.writable_buffers.get_mut(key).expect(&missing_key_msg(key))
     }
 
     pub fn set_error(&mut self, error: Option<ServerError>) {

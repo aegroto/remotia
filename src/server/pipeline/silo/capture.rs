@@ -38,19 +38,21 @@ pub fn launch_capture_thread(
 
             spin(spin_time, last_frame_capture_time as i64).await;
 
-            let (mut raw_frame_buffer, raw_frame_buffer_wait_time) =
+            let (raw_frame_buffer, raw_frame_buffer_wait_time) =
                 pull_raw_buffer(&mut raw_frame_buffers_receiver).await;
 
-            let (capture_start_time, capture_timestamp) =
-                capture(&mut frame_capturer, &mut raw_frame_buffer);
-
             let mut frame_data = ServerFrameData::default();
+
+            frame_data.insert_writable_buffer("raw_frame_buffer", raw_frame_buffer);
+
+            let (capture_start_time, capture_timestamp) =
+                capture(&mut frame_capturer, &mut frame_data);
+
             last_frame_capture_time = capture_start_time.elapsed().as_millis();
 
             frame_data.set("capture_timestamp", capture_timestamp);
             frame_data.set_local("capture_time", last_frame_capture_time);
             frame_data.set_local("capturer_idle_time", raw_frame_buffer_wait_time);
-            frame_data.insert_writable_buffer("raw_frame_buffer", raw_frame_buffer);
 
             if let ControlFlow::Break(_) = push_result(
                 &capture_result_sender,
@@ -79,7 +81,7 @@ fn push_result(
 
 fn capture(
     frame_capturer: &mut Box<dyn FrameCapturer + Send>,
-    raw_frame_buffer: &mut BytesMut,
+    frame_data: &mut ServerFrameData,
 ) -> (Instant, u128) {
     debug!("Capturing frame...");
     let capture_start_time = Instant::now();
@@ -87,7 +89,7 @@ fn capture(
         .duration_since(UNIX_EPOCH)
         .unwrap()
         .as_millis();
-    frame_capturer.capture(raw_frame_buffer).unwrap();
+    frame_capturer.capture(frame_data);
     debug!("Frame captured");
     (capture_start_time, capture_timestamp)
 }
