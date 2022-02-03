@@ -12,9 +12,7 @@ use tokio::{
 
 use crate::{
     common::{feedback::FeedbackMessage, helpers::silo::channel_pull},
-    server::{
-        profiling::{ServerProfiler},
-    },
+    server::profiling::ServerProfiler,
 };
 
 use super::transfer::TransferResult;
@@ -22,7 +20,7 @@ use super::transfer::TransferResult;
 pub fn launch_profile_thread(
     mut profilers: Vec<Box<dyn ServerProfiler + Send>>,
     mut transfer_result_receiver: UnboundedReceiver<TransferResult>,
-    feedback_sender: Sender<FeedbackMessage>
+    feedback_sender: Sender<FeedbackMessage>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
         loop {
@@ -32,12 +30,14 @@ pub fn launch_profile_thread(
             let mut frame_data = transfer_result.frame_data;
             frame_data.set_local("total_time", total_time);
 
-            profilers.iter_mut().for_each(|profiler| {
-                profiler.log_frame(frame_data.clone());
-            });
+            let profilers_count = profilers.len();
+            for i in 0..profilers_count {
+                let profiler = profilers.get_mut(i).unwrap();
 
-            // profile(&mut round_stats, frame_stats, round_duration);
-            // broadcast_feedbacks(&mut profiler, &feedback_sender).await;
+                profiler.log_frame(frame_data.clone());
+
+                broadcast_feedbacks(profiler, &feedback_sender).await;
+            }
         }
     })
 }
