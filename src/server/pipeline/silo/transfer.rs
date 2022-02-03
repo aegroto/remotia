@@ -11,11 +11,10 @@ use tokio::task::JoinHandle;
 
 use crate::common::feedback::FeedbackMessage;
 use crate::common::helpers::silo::channel_pull;
-use crate::server::profiling::TransmittedFrameStats;
 use crate::server::send::FrameSender;
+use crate::server::types::ServerFrameData;
 
 use super::encode::EncodeResult;
-use super::types::ServerFrameData;
 
 pub struct TransferResult {
     pub frame_data: ServerFrameData,

@@ -5,8 +5,6 @@ mod encode;
 mod profile;
 mod transfer;
 
-mod types;
-
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
@@ -28,12 +26,10 @@ use crate::server::pipeline::silo::capture::{launch_capture_thread, CaptureResul
 use crate::server::pipeline::silo::encode::{launch_encode_thread, EncodeResult};
 use crate::server::pipeline::silo::profile::launch_profile_thread;
 use crate::server::pipeline::silo::transfer::{launch_transfer_thread, TransferResult};
-use crate::server::profiling::TransmittedFrameStats;
 use crate::server::send::FrameSender;
 
 use crate::server::profiling::ServerProfiler;
 use crate::server::utils::encoding::{packed_bgra_to_packed_bgr, setup_packed_bgr_frame_buffer};
-use crate::server::utils::profilation::setup_round_stats;
 use clap::Parser;
 use log::{debug, error, info};
 use scrap::{Capturer, Display, Frame};
@@ -48,10 +44,7 @@ pub struct SiloServerConfiguration {
     pub encoder: Box<dyn Encoder + Send>,
     pub frame_sender: Box<dyn FrameSender + Send>,
 
-    pub profiler: Box<dyn ServerProfiler + Send>,
-
-    pub console_profiling: bool,
-    pub csv_profiling: bool,
+    pub profilers: Vec<Box<dyn ServerProfiler + Send>>,
 
     pub frames_capture_rate: u32,
 
@@ -94,8 +87,6 @@ impl SiloServerPipeline {
             encoded_frame_buffers_sender.send(buf).unwrap();
         }
 
-        let round_duration = Duration::from_secs(1);
-
         let (capture_result_sender, capture_result_receiver) =
             mpsc::unbounded_channel::<CaptureResult>();
         let (encode_result_sender, encode_result_receiver) =
@@ -133,12 +124,9 @@ impl SiloServerPipeline {
         );
 
         let profile_handle = launch_profile_thread(
-            self.config.profiler,
-            self.config.csv_profiling,
-            self.config.console_profiling,
+            self.config.profilers,
             transfer_result_receiver,
-            feedback_sender,
-            round_duration,
+            feedback_sender
         );
 
         capture_handle.await.unwrap();

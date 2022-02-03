@@ -16,12 +16,7 @@ use tokio::{
     task::JoinHandle,
 };
 
-use crate::{
-    common::{feedback::FeedbackMessage, helpers::silo::channel_pull},
-    server::capture::FrameCapturer,
-};
-
-use super::types::ServerFrameData;
+use crate::{common::{feedback::FeedbackMessage, helpers::silo::channel_pull}, server::{capture::FrameCapturer, types::ServerFrameData}};
 
 pub struct CaptureResult {
     pub capture_time: Instant,
@@ -36,12 +31,12 @@ pub fn launch_capture_thread(
     mut feedback_receiver: broadcast::Receiver<FeedbackMessage>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
-        let mut last_frame_capture_time: i64 = 0;
+        let mut last_frame_capture_time: u128 = 0;
 
         loop {
             pull_feedback(&mut feedback_receiver, &mut frame_capturer);
 
-            spin(spin_time, last_frame_capture_time).await;
+            spin(spin_time, last_frame_capture_time as i64).await;
 
             let (mut raw_frame_buffer, raw_frame_buffer_wait_time) =
                 pull_raw_buffer(&mut raw_frame_buffers_receiver).await;
@@ -50,9 +45,10 @@ pub fn launch_capture_thread(
                 capture(&mut frame_capturer, &mut raw_frame_buffer);
 
             let mut frame_data = ServerFrameData::default();
-            last_frame_capture_time = capture_start_time.elapsed().as_millis() as i64;
+            last_frame_capture_time = capture_start_time.elapsed().as_millis();
 
             frame_data.set("capture_timestamp", capture_timestamp);
+            frame_data.set_local("capture_time", last_frame_capture_time);
             frame_data.set_local("capturer_idle_time", raw_frame_buffer_wait_time);
             frame_data.insert_writable_buffer("raw_frame_buffer", raw_frame_buffer);
 

@@ -11,12 +11,9 @@ use tokio::{
     task::JoinHandle,
 };
 
-use crate::{
-    common::{feedback::FeedbackMessage, helpers::silo::channel_pull},
-    server::{encode::Encoder, error::ServerError, profiling::TransmittedFrameStats},
-};
+use crate::{common::{feedback::FeedbackMessage, helpers::silo::channel_pull}, server::{encode::Encoder, error::ServerError, types::ServerFrameData}};
 
-use super::{capture::CaptureResult, types::ServerFrameData};
+use super::{capture::CaptureResult};
 
 pub struct EncodeResult {
     pub frame_data: ServerFrameData,
