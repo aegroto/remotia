@@ -14,7 +14,13 @@ use serde::Serialize;
 use srt_tokio::{SrtSocket, SrtSocketBuilder};
 use tokio::time::timeout;
 
-use crate::{common::{feedback::FeedbackMessage, network::{FrameBody, FrameHeader}}, server::error::ServerError};
+use crate::{
+    common::{
+        feedback::FeedbackMessage,
+        network::{FrameBody, FrameHeader},
+    },
+    server::{error::ServerError, types::ServerFrameData},
+};
 
 use super::FrameSender;
 
@@ -71,18 +77,19 @@ impl SRTFrameSender {
     }
 }
 
-macro_rules! phase {
-    ($future: expr) => {
-        if let Err(_) = $future.await {
-            return 0;
-        }
-    };
-}
-
 #[async_trait]
 impl FrameSender for SRTFrameSender {
-    async fn send_frame(&mut self, capture_timestamp: u128, frame_buffer: &[u8]) -> usize {
-        phase!(self.send_frame_body(capture_timestamp, frame_buffer));
+    async fn send_frame(&mut self, frame_data: &mut ServerFrameData) {
+        let capture_timestamp = frame_data.get("capture_timestamp");
+
+        // Extract the slice of the encoded buffer which contains data to be transmitted
+        let encoded_size = frame_data.get("encoded_size") as usize;
+        let mut full_frame_buffer = frame_data
+            .extract_writable_buffer("encoded_frame_buffer")
+            .unwrap();
+        let mut frame_buffer = full_frame_buffer.split_to(encoded_size);
+
+        self.send_frame_body(capture_timestamp, &frame_buffer).await.unwrap();
         debug!(
             "Buffer size: {}, Timestamp: {:?}",
             frame_buffer.len(),
@@ -92,7 +99,11 @@ impl FrameSender for SRTFrameSender {
                 .as_millis()
         );
 
-        frame_buffer.len()
+        frame_data.set_local("transmitted_bytes", frame_buffer.len() as u128);
+
+        // Put the whole buffer back into the DTO such that the pipeline may return the buffer
+        frame_buffer.unsplit(full_frame_buffer);
+        frame_data.insert_writable_buffer("encoded_frame_buffer", frame_buffer);
     }
 
     fn handle_feedback(&mut self, message: FeedbackMessage) {

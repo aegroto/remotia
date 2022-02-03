@@ -38,21 +38,13 @@ pub fn launch_transfer_thread(
             let mut frame_data = encode_result.frame_data;
 
             if frame_data.get_error().is_none() {
-                let capture_timestamp = frame_data.get("capture_timestamp");
-                let encoded_size = frame_data.get("encoded_size") as usize;
-                let encoded_frame_buffer = frame_data.get_writable_buffer_ref("encoded_frame_buffer").unwrap();
-
-                let (transfer_start_time, transmitted_bytes) = transfer(
+                transfer(
                     &mut frame_sender,
-                    capture_timestamp,
-                    &encoded_frame_buffer,
-                    encoded_size,
+                    &mut frame_data
                 )
                 .await;
 
-                frame_data.set_local("transfer_time", transfer_start_time.elapsed().as_millis());
                 frame_data.set_local("transferrer_idle_time", encode_result_wait_time);
-                frame_data.set_local("transmitted_bytes", transmitted_bytes as u128);
             } else {
                 debug!("Error on encoded frame: {:?}", frame_data.get_error());
             }
@@ -74,17 +66,15 @@ pub fn launch_transfer_thread(
 
 async fn transfer(
     frame_sender: &mut Box<dyn FrameSender + Send>,
-    capture_timestamp: u128,
-    encoded_frame_buffer: &BytesMut,
-    encoded_size: usize,
-) -> (Instant, usize) {
+    frame_data: &mut ServerFrameData
+) {
     debug!("Transmitting...");
     let transfer_start_time = Instant::now();
-    let transmitted_bytes = frame_sender
-        .send_frame(capture_timestamp, &encoded_frame_buffer[..encoded_size])
+    frame_sender
+        .send_frame(frame_data)
         .await;
 
-    (transfer_start_time, transmitted_bytes)
+    frame_data.set_local("transfer_time", transfer_start_time.elapsed().as_millis());
 }
 
 async fn pull_encode_result(
