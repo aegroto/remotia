@@ -42,19 +42,20 @@ async fn main() -> std::io::Result<()> {
     let options = CommandLineServerOptions::parse();
     let (width, height) = parse_canvas_resolution_str(&options.resolution);
 
-    let profilers: Vec<Box<dyn ServerProfiler + Send>> = vec![
-        Box::new(TCPServerProfiler::connect()),
-        Box::new(ConsoleServerProfiler {
-            header: Some(String::from("Average computational times")),
-            values_to_log: vec![
-                String::from("capture_time"),
-                String::from("encoding_time"),
-                String::from("transfer_time"),
-            ],
+    let tcp_feedback_profiler = Box::new(TCPServerProfiler::connect());
+    let computational_times_profiler = Box::new(ConsoleServerProfiler {
+        header: Some(String::from("Average computational times")),
+        values_to_log: vec![
+            String::from("capture_time"),
+            String::from("encoding_time"),
+            String::from("transfer_time"),
+        ],
 
-            ..Default::default()
-        }),
-    ];
+        ..Default::default()
+    });
+
+    let profilers: Vec<Box<dyn ServerProfiler + Send>> =
+        vec![tcp_feedback_profiler, computational_times_profiler];
 
     let buffer_size = (width * height * 4) as usize;
     let encoder = Box::new(PoolEncoder::new(
