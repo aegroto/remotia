@@ -1,16 +1,7 @@
 extern crate scrap;
 
 use clap::Parser;
-use remotia::{
-    common::command_line::parse_canvas_resolution_str,
-    server::{
-        capture::scrap::ScrapFrameCapturer,
-        encode::ffmpeg::h264::H264Encoder,
-        pipeline::silo::{BuffersConfig, SiloServerConfiguration, SiloServerPipeline},
-        profiling::{console::ConsoleServerProfiler, tcp::TCPServerProfiler, ServerProfiler},
-        send::remvsp::{RemVPSFrameSenderConfiguration, RemVSPFrameSender},
-    },
-};
+use remotia::{common::command_line::parse_canvas_resolution_str, server::{capture::scrap::ScrapFrameCapturer, encode::ffmpeg::h264::H264Encoder, error::ServerError, pipeline::silo::{BuffersConfig, SiloServerConfiguration, SiloServerPipeline}, profiling::{ServerProfiler, console::{errors::ConsoleServerErrorsProfiler, stats::ConsoleServerStatsProfiler}, tcp::TCPServerProfiler}, send::remvsp::{RemVPSFrameSenderConfiguration, RemVSPFrameSender}}};
 
 use remotia::server::encode::pool::PoolEncoder;
 
@@ -43,7 +34,7 @@ async fn main() -> std::io::Result<()> {
     let (width, height) = parse_canvas_resolution_str(&options.resolution);
 
     let tcp_feedback_profiler = Box::new(TCPServerProfiler::connect());
-    let computational_times_profiler = Box::new(ConsoleServerProfiler {
+    let computational_times_profiler = Box::new(ConsoleServerStatsProfiler {
         header: Some(String::from(" -- Average computational times")),
         values_to_log: vec![
             String::from("capture_time"),
@@ -55,7 +46,7 @@ async fn main() -> std::io::Result<()> {
         ..Default::default()
     });
 
-    let idle_times_profiler = Box::new(ConsoleServerProfiler {
+    let idle_times_profiler = Box::new(ConsoleServerStatsProfiler {
         header: Some(String::from(" -- Average idle times")),
         values_to_log: vec![
             String::from("capturer_idle_time"),
@@ -66,10 +57,20 @@ async fn main() -> std::io::Result<()> {
         ..Default::default()
     });
 
+    let errors_profiler = Box::new(ConsoleServerErrorsProfiler {
+        types_to_log: vec![
+            ServerError::Timeout,
+            ServerError::NoEncodedFrames,
+            ServerError::NoAvailableEncoders,
+        ],
+        ..Default::default()
+    });
+
     let profilers: Vec<Box<dyn ServerProfiler + Send>> = vec![
         tcp_feedback_profiler,
         computational_times_profiler,
         idle_times_profiler,
+        errors_profiler
     ];
 
     let buffer_size = (width * height * 4) as usize;
