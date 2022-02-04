@@ -52,28 +52,20 @@ impl SRTFrameSender {
             .unwrap();
     }
 
-    async fn send_with_timeout<T: Serialize>(&mut self, obj: T) -> Result<(), ServerError> {
-        let binarized_obj = Bytes::from(bincode::serialize(&obj).unwrap());
-
-        if let Err(_) = timeout(self.timeout, self.send_item(binarized_obj)).await {
-            debug!("Timeout");
-            Err(ServerError::Timeout)
-        } else {
-            Ok(())
-        }
-    }
-
     async fn send_frame_body(
         &mut self,
         capture_timestamp: u128,
         frame_buffer: &[u8],
     ) -> Result<(), ServerError> {
         debug!("Sending frame body...");
-        self.send_with_timeout(FrameBody {
+        let obj = FrameBody {
             capture_timestamp,
             frame_pixels: frame_buffer.to_vec(),
-        })
-        .await
+        };
+        let binarized_obj = Bytes::from(bincode::serialize(&obj).unwrap());
+        self.send_item(binarized_obj).await;
+
+        Ok(())
     }
 }
 
