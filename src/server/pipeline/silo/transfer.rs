@@ -40,7 +40,7 @@ pub fn launch_transfer_thread(
             if frame_data.get_error().is_none() {
                 transfer(&mut frame_sender, &mut frame_data).await;
 
-                frame_data.set_local("transferrer_idle_time", encode_result_wait_time);
+                frame_data.set_local("transferrer_encode_result_wait_time", encode_result_wait_time);
                 frame_data.set_local(
                     "total_time",
                     SystemTime::now()

@@ -47,9 +47,10 @@ pub fn launch_encode_thread(
                     pull_buffer(&mut encoded_frame_buffers_receiver).await;
 
                 frame_data.insert_writable_buffer("encoded_frame_buffer", encoded_frame_buffer);
+                frame_data.set_local("encoder_capture_result_wait_time", capture_result_wait_time);
                 frame_data.set_local(
-                    "encoder_idle_time",
-                    capture_result_wait_time + encoded_frame_buffer_wait_time,
+                    "encoder_encoded_frame_buffer_wait_time",
+                    encoded_frame_buffer_wait_time,
                 );
                 frame_data.set_local("capture_delay", capture_delay);
 

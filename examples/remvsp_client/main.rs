@@ -1,10 +1,17 @@
 use std::{net::SocketAddr, str::FromStr, time::Duration};
 
 use clap::Parser;
-use remotia::{client::{decode::h264::H264Decoder, pipeline::silo::{BuffersConfig, SiloClientConfiguration, SiloClientPipeline}, profiling::tcp::TCPClientProfiler, receive::remvsp::{RemVSPFrameReceiver, RemVSPFrameReceiverConfiguration}, render::beryllium::BerylliumRenderer}, common::{
-        command_line::parse_canvas_resolution_str,
-    }};
 use remotia::client::decode::pool::PoolDecoder;
+use remotia::{
+    client::{
+        decode::h264::H264Decoder,
+        pipeline::silo::{BuffersConfig, SiloClientConfiguration, SiloClientPipeline},
+        profiling::tcp::TCPClientProfiler,
+        receive::remvsp::{RemVSPFrameReceiver, RemVSPFrameReceiverConfiguration},
+        render::beryllium::BerylliumRenderer,
+    },
+    common::command_line::parse_canvas_resolution_str,
+};
 
 #[derive(Parser)]
 #[clap(version = "0.1.0", author = "Lorenzo C. <aegroto@protonmail.com>")]
@@ -49,15 +56,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ]
     ));
 
-    let frame_receiver = Box::new(RemVSPFrameReceiver::connect(
+    let frame_receiver = Box::new(
+        RemVSPFrameReceiver::connect(
             i16::from_str(&options.binding_port).unwrap(),
             SocketAddr::from_str(&options.server_address)?,
             RemVSPFrameReceiverConfiguration {
                 delayable_threshold: 50,
                 frame_pull_interval: Duration::from_millis(10),
                 ..Default::default()
-            }
-        ).await);
+            },
+        )
+        .await,
+    );
 
     let profiler = Box::new(TCPClientProfiler::connect().await);
 

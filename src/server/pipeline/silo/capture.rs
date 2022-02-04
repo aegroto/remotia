@@ -35,7 +35,9 @@ pub fn launch_capture_thread(
         let mut interval = tokio::time::interval(Duration::from_millis(tick_duration));
 
         loop {
+            let spin_start_time = Instant::now();
             interval.tick().await;
+            let spin_time = spin_start_time.elapsed().as_millis();
 
             pull_feedback(&mut feedback_receiver, &mut frame_capturer);
 
@@ -51,7 +53,8 @@ pub fn launch_capture_thread(
 
             frame_data.set("capture_timestamp", capture_timestamp);
             frame_data.set_local("capture_time", capture_start_time.elapsed().as_millis());
-            frame_data.set_local("capturer_idle_time", raw_frame_buffer_wait_time);
+            frame_data.set_local("spin_time", spin_time);
+            frame_data.set_local("capturer_raw_frame_buffer_wait_time", raw_frame_buffer_wait_time);
 
             if let ControlFlow::Break(_) = push_result(
                 &capture_result_sender,

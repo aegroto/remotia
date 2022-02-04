@@ -49,9 +49,11 @@ async fn main() -> std::io::Result<()> {
     let idle_times_profiler = Box::new(ConsoleServerStatsProfiler {
         header: Some(String::from(" -- Average idle times")),
         values_to_log: vec![
-            String::from("capturer_idle_time"),
-            String::from("encoder_idle_time"),
-            String::from("transferrer_idle_time"),
+            String::from("spin_time"),
+            String::from("capturer_raw_frame_buffer_wait_time"),
+            String::from("encoder_capture_result_wait_time"),
+            String::from("encoder_encoded_frame_buffer_wait_time"),
+            String::from("transferrer_encode_result_wait_time"),
         ],
 
         ..Default::default()
@@ -102,9 +104,9 @@ async fn main() -> std::io::Result<()> {
 
         width: width as usize,
         height: height as usize,
-        maximum_preencoding_capture_delay: 5,
+        maximum_preencoding_capture_delay: 50,
         buffers_conf: BuffersConfig {
-            maximum_raw_frame_buffers: 4,
+            maximum_raw_frame_buffers: 8,
             maximum_encoded_frame_buffers: 256,
         },
     });
