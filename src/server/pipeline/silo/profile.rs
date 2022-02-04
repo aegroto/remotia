@@ -34,7 +34,7 @@ pub fn launch_profile_thread(
             for i in 0..profilers_count {
                 let profiler = profilers.get_mut(i).unwrap();
 
-                profiler.log_frame(frame_data.clone());
+                profiler.log_frame(frame_data.clone_without_buffers());
 
                 broadcast_feedbacks(profiler, &feedback_sender).await;
             }
