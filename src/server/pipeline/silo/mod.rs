@@ -67,8 +67,6 @@ impl SiloServerPipeline {
     }
 
     pub async fn run(self) {
-        let spin_time = (1000 / self.config.frames_capture_rate) as i64;
-
         let raw_frame_size = self.config.width * self.config.height * 4;
         let maximum_encoded_frame_size = self.config.width * self.config.height * 4;
 
@@ -100,7 +98,7 @@ impl SiloServerPipeline {
             broadcast::channel::<FeedbackMessage>(32);
 
         let capture_handle = launch_capture_thread(
-            spin_time,
+            self.config.frames_capture_rate,
             raw_frame_buffers_receiver,
             capture_result_sender,
             self.config.frame_capturer,

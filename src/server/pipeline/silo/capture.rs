@@ -24,19 +24,20 @@ pub struct CaptureResult {
 }
 
 pub fn launch_capture_thread(
-    spin_time: i64,
+    frames_capture_rate: u32,
     mut raw_frame_buffers_receiver: UnboundedReceiver<BytesMut>,
     capture_result_sender: UnboundedSender<CaptureResult>,
     mut frame_capturer: Box<dyn FrameCapturer + Send>,
     mut feedback_receiver: broadcast::Receiver<FeedbackMessage>,
 ) -> JoinHandle<()> {
     tokio::spawn(async move {
-        let mut last_frame_capture_time: u128 = 0;
+        let tick_duration = (1000.0 / frames_capture_rate as f64) as u64;
+        let mut interval = tokio::time::interval(Duration::from_millis(tick_duration));
 
         loop {
-            pull_feedback(&mut feedback_receiver, &mut frame_capturer);
+            interval.tick().await;
 
-            spin(spin_time, last_frame_capture_time as i64).await;
+            pull_feedback(&mut feedback_receiver, &mut frame_capturer);
 
             let (raw_frame_buffer, raw_frame_buffer_wait_time) =
                 pull_raw_buffer(&mut raw_frame_buffers_receiver).await;
@@ -48,10 +49,8 @@ pub fn launch_capture_thread(
             let (capture_start_time, capture_timestamp) =
                 capture(&mut frame_capturer, &mut frame_data);
 
-            last_frame_capture_time = capture_start_time.elapsed().as_millis();
-
             frame_data.set("capture_timestamp", capture_timestamp);
-            frame_data.set_local("capture_time", last_frame_capture_time);
+            frame_data.set_local("capture_time", capture_start_time.elapsed().as_millis());
             frame_data.set_local("capturer_idle_time", raw_frame_buffer_wait_time);
 
             if let ControlFlow::Break(_) = push_result(
@@ -101,11 +100,6 @@ async fn pull_raw_buffer(
         .await
         .expect("Raw frame buffers channel closed, terminating.");
     (raw_frame_buffer, raw_frame_buffer_wait_time)
-}
-
-async fn spin(spin_time: i64, last_frame_capture_time: i64) {
-    let sleep_time = std::cmp::max(0, spin_time - last_frame_capture_time) as u64;
-    tokio::time::sleep(Duration::from_millis(sleep_time)).await;
 }
 
 fn pull_feedback(
