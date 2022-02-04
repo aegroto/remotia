@@ -57,8 +57,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let frame_receiver = Box::new(
         SRTFrameReceiver::new(
             &options.server_address,
-            Duration::from_millis(300),
-            Duration::from_millis(5000),
+            Duration::from_millis(10),
+            Duration::from_millis(500),
         )
         .await,
     );
@@ -82,7 +82,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             maximum_raw_frame_buffers: 32,
         },
 
-        maximum_pre_render_frame_delay: 10000,
+        maximum_pre_render_frame_delay: 300,
     });
 
     pipeline.run().await;
