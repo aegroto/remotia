@@ -44,18 +44,33 @@ async fn main() -> std::io::Result<()> {
 
     let tcp_feedback_profiler = Box::new(TCPServerProfiler::connect());
     let computational_times_profiler = Box::new(ConsoleServerProfiler {
-        header: Some(String::from("Average computational times")),
+        header: Some(String::from(" -- Average computational times")),
         values_to_log: vec![
             String::from("capture_time"),
             String::from("encoding_time"),
             String::from("transfer_time"),
+            String::from("total_time"),
         ],
 
         ..Default::default()
     });
 
-    let profilers: Vec<Box<dyn ServerProfiler + Send>> =
-        vec![tcp_feedback_profiler, computational_times_profiler];
+    let idle_times_profiler = Box::new(ConsoleServerProfiler {
+        header: Some(String::from(" -- Average idle times")),
+        values_to_log: vec![
+            String::from("capturer_idle_time"),
+            String::from("encoder_idle_time"),
+            String::from("transferrer_idle_time"),
+        ],
+
+        ..Default::default()
+    });
+
+    let profilers: Vec<Box<dyn ServerProfiler + Send>> = vec![
+        tcp_feedback_profiler,
+        computational_times_profiler,
+        idle_times_profiler,
+    ];
 
     let buffer_size = (width * height * 4) as usize;
     let encoder = Box::new(PoolEncoder::new(

@@ -1,6 +1,6 @@
 use std::ops::ControlFlow;
 use std::sync::Arc;
-use std::time::Instant;
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
 use bytes::BytesMut;
 use log::{debug, warn};
@@ -38,13 +38,17 @@ pub fn launch_transfer_thread(
             let mut frame_data = encode_result.frame_data;
 
             if frame_data.get_error().is_none() {
-                transfer(
-                    &mut frame_sender,
-                    &mut frame_data
-                )
-                .await;
+                transfer(&mut frame_sender, &mut frame_data).await;
 
                 frame_data.set_local("transferrer_idle_time", encode_result_wait_time);
+                frame_data.set_local(
+                    "total_time",
+                    SystemTime::now()
+                        .duration_since(UNIX_EPOCH)
+                        .unwrap()
+                        .as_millis()
+                        - frame_data.get("capture_timestamp"),
+                );
             } else {
                 debug!("Error on encoded frame: {:?}", frame_data.get_error());
             }
@@ -66,13 +70,11 @@ pub fn launch_transfer_thread(
 
 async fn transfer(
     frame_sender: &mut Box<dyn FrameSender + Send>,
-    frame_data: &mut ServerFrameData
+    frame_data: &mut ServerFrameData,
 ) {
     debug!("Transmitting...");
     let transfer_start_time = Instant::now();
-    frame_sender
-        .send_frame(frame_data)
-        .await;
+    frame_sender.send_frame(frame_data).await;
 
     frame_data.set_local("transfer_time", transfer_start_time.elapsed().as_millis());
 }
