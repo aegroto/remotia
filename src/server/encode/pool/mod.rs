@@ -28,6 +28,7 @@ struct EncodingUnit {
     id: u8,
     encoder: Box<dyn Encoder + Send>,
     cached_raw_frame_buffer: BytesMut,
+    cached_encoded_frame_buffer: BytesMut,
 }
 unsafe impl Send for EncodingUnit {}
 
@@ -40,7 +41,7 @@ pub struct PoolEncoder {
 unsafe impl Send for PoolEncoder {}
 
 impl PoolEncoder {
-    pub fn new(raw_frame_buffer_size: usize, mut encoders: Vec<Box<dyn Encoder + Send>>) -> Self {
+    pub fn new(buffers_size: usize, mut encoders: Vec<Box<dyn Encoder + Send>>) -> Self {
         let (encoded_frames_sender, encoded_frames_receiver) =
             mpsc::unbounded_channel::<EncodingResult>();
 
@@ -52,11 +53,8 @@ impl PoolEncoder {
             encoding_units.push(EncodingUnit {
                 id: i,
                 encoder,
-                cached_raw_frame_buffer: {
-                    let mut buf = BytesMut::with_capacity(raw_frame_buffer_size);
-                    buf.resize(raw_frame_buffer_size, 0);
-                    buf
-                },
+                cached_raw_frame_buffer: Self::allocate_buffer(buffers_size),
+                cached_encoded_frame_buffer: Self::allocate_buffer(buffers_size),
             });
 
             i += 1;
@@ -69,72 +67,47 @@ impl PoolEncoder {
         }
     }
 
-    fn push_to_unit(
-        &mut self,
-        frame_data: &mut ServerFrameData,
-        mut chosen_encoding_unit: EncodingUnit,
-    ) {
-        let encoder_id = chosen_encoding_unit.id;
-        debug!("Pushing to encoder #{}...", encoder_id);
+    fn allocate_buffer(size: usize) -> BytesMut {
+        let mut buf = BytesMut::with_capacity(size);
+        buf.resize(size, 0);
+        buf
+    }
+
+    fn push_to_unit(&mut self, frame_data: &mut ServerFrameData, mut unit: EncodingUnit) {
+        let encoder_id = unit.id;
+        let frame_id = frame_data.get("capture_timestamp");
+        debug!("Pushing frame #{} to encoder #{}...", frame_id, encoder_id);
 
         let result_sender = self.encoded_frames_sender.clone();
 
-        // Clone the input raw frame buffer
+        // Clone the pipeline's raw frame buffer
         let raw_frame_buffer = frame_data
-            .extract_writable_buffer("raw_frame_buffer")
+            .get_writable_buffer_ref("raw_frame_buffer")
             .unwrap();
-        chosen_encoding_unit
-            .cached_raw_frame_buffer
-            .copy_from_slice(&raw_frame_buffer);
+        unit.cached_raw_frame_buffer
+            .copy_from_slice(raw_frame_buffer);
 
-        // Extract frame buffers and clone the DTO
-        // Then add the buffer to the cloned DTO and send it to the encoding thread
-        let encoded_frame_buffer = frame_data
-            .extract_writable_buffer("encoded_frame_buffer")
-            .expect("No encoded frame buffer in frame DTO");
-
-        let mut local_frame_data = frame_data.clone();
-
-        local_frame_data.insert_writable_buffer("encoded_frame_buffer", encoded_frame_buffer);
-
-        // Add the original raw frame buffer back such that the pipeline may make use of it again
-        frame_data.insert_writable_buffer("raw_frame_buffer", raw_frame_buffer);
+        // Clone the DTO excluding buffers, whom should be returned to the pipeline
+        let mut local_frame_data = frame_data.clone_without_buffers();
 
         // Launch the encoding task
         tokio::spawn(async move {
-            // Split the encoding unit internal buffer such that is owned by local frame data
-            let local_raw_frame_buffer = chosen_encoding_unit.cached_raw_frame_buffer.split();
+            // Split buffers such that memory is owned by frame data
+            // Reserve space for pooling info on the encoded frame buffer
+            let local_raw_frame_buffer = unit.cached_raw_frame_buffer.split();
             local_frame_data.insert_writable_buffer("raw_frame_buffer", local_raw_frame_buffer);
 
-            let mut output_buffer = local_frame_data
-                .get_writable_buffer_ref("encoded_frame_buffer")
-                .unwrap()
-                .split_to(1);
+            let local_encoded_frame_buffer = unit
+                .cached_encoded_frame_buffer
+                .split_off(POOLING_INFO_SIZE);
+            local_frame_data
+                .insert_writable_buffer("encoded_frame_buffer", local_encoded_frame_buffer);
 
-            chosen_encoding_unit
-                .encoder
-                .encode(&mut local_frame_data)
-                .await;
+            unit.encoder.encode(&mut local_frame_data).await;
 
-            let encoded_frame_buffer = local_frame_data
-                .extract_writable_buffer("encoded_frame_buffer")
-                .unwrap();
-            output_buffer.unsplit(encoded_frame_buffer);
-            output_buffer[0] = chosen_encoding_unit.id;
-
-            local_frame_data.insert_writable_buffer("encoded_frame_buffer", output_buffer);
-
-            // Unsplit the internal buffer with the slice passed to the encoder
-            // Doing so it is owned by the encoding unit again
-            chosen_encoding_unit.cached_raw_frame_buffer.unsplit(
-                local_frame_data
-                    .extract_writable_buffer("raw_frame_buffer")
-                    .unwrap(),
-            );
-
-            debug!("Sending encoder #{} result...", chosen_encoding_unit.id);
+            debug!("Sending encoder #{} result...", unit.id);
             let send_result = result_sender.send(EncodingResult {
-                encoding_unit: chosen_encoding_unit,
+                encoding_unit: unit,
                 frame_data: local_frame_data,
             });
 
@@ -176,19 +149,49 @@ impl Encoder for PoolEncoder {
             encoding_result = pull_result.unwrap();
         }
 
-        let encoding_unit = encoding_result.encoding_unit;
+        let mut encoding_unit = encoding_result.encoding_unit;
         let mut local_frame_data = encoding_result.frame_data;
-        let encoded_frame_buffer = local_frame_data
-            .extract_writable_buffer("encoded_frame_buffer")
+
+        // Copy the local encoded frame into the pipeline's buffer
+        let encoded_frame_buffer = frame_data
+            .get_writable_buffer_ref("encoded_frame_buffer")
             .unwrap();
 
-        // Copy the just pulled frame data in the new DTO
-        frame_data.set("capture_timestamp", local_frame_data.get("capture_timestamp"));
-        frame_data.set_local("capture_time", local_frame_data.get_local("capture_time"));
+        let local_encoded_frame_buffer = local_frame_data
+            .get_writable_buffer_ref("encoded_frame_buffer")
+            .unwrap();
+
+        encoded_frame_buffer[0] = encoding_unit.id;
+        encoded_frame_buffer[POOLING_INFO_SIZE..].copy_from_slice(local_encoded_frame_buffer);
+
+        // Return memory ownership to the encoding unit
+        encoding_unit.cached_raw_frame_buffer.unsplit(
+            local_frame_data
+                .extract_writable_buffer("raw_frame_buffer")
+                .unwrap(),
+        );
+
+        encoding_unit.cached_encoded_frame_buffer.unsplit(
+            local_frame_data
+                .extract_writable_buffer("encoded_frame_buffer")
+                .unwrap(),
+        );
+
+        // Insert frame stats
+        let capture_timestamp = local_frame_data.get("capture_timestamp");
+        let capture_time = local_frame_data.get_local("capture_time");
+        frame_data.set("capture_timestamp", capture_timestamp);
+        frame_data.set_local("capture_time", capture_time);
+
+        debug!(
+            "Frame #{} size: {} encoder: #{}",
+            capture_timestamp,
+            local_frame_data.get("encoded_size"),
+            encoding_unit.id
+        );
 
         self.encoding_units.push(encoding_unit);
 
-        frame_data.insert_writable_buffer("encoded_frame_buffer", encoded_frame_buffer);
         frame_data.set(
             "encoded_size",
             local_frame_data.get("encoded_size") + POOLING_INFO_SIZE as u128,

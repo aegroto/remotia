@@ -83,6 +83,16 @@ impl ServerFrameData {
     pub fn get_error(&self) -> Option<ServerError> {
         self.error
     }
+
+    pub fn clone_without_buffers(&self) -> Self {
+        Self {
+            stats: self.stats.clone(),
+            local_stats: self.local_stats.clone(),
+            error: self.error.clone(),
+
+            ..Default::default()
+        }
+    }
 }
 
 fn missing_key_msg(key: &str) -> String {
