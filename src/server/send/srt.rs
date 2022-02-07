@@ -11,7 +11,10 @@ use futures::{stream, SinkExt, StreamExt};
 
 use log::{debug, info, warn};
 use serde::Serialize;
-use srt_tokio::{SrtSocket, SrtSocketBuilder, options::{PacketSize, ByteCount}};
+use srt_tokio::{
+    options::{ByteCount, PacketSize},
+    SrtSocket, SrtSocketBuilder,
+};
 use tokio::time::timeout;
 
 use crate::{
@@ -25,17 +28,16 @@ use crate::{
 use super::FrameSender;
 
 pub struct SRTFrameSender {
-    socket: SrtSocket
+    socket: SrtSocket,
 }
 
 impl SRTFrameSender {
-    pub async fn new(port: u16, latency: Duration) -> Self {
+    pub async fn new(port: u16) -> Self {
         info!("Listening...");
         let socket = SrtSocket::builder()
-            .latency(latency)
             .set(|options| {
-                options.sender.buffer_size = ByteCount(1280 * 720 * 4 * 16);
-                options.sender.max_payload_size = PacketSize(1280 * 720 * 4);
+                options.sender.buffer_size = ByteCount(1024 * 1024 * 32); // 32 MB for internal buffering
+                options.sender.max_payload_size = PacketSize(1024 * 1024 * 32);
             })
             .listen_on(port)
             .await
@@ -70,8 +72,6 @@ impl FrameSender for SRTFrameSender {
         };
         let binarized_obj = Bytes::from(bincode::serialize(&obj).unwrap());
 
-        // let chunks = binarized_obj.chunks(512);
-
         self.socket
             .send((Instant::now(), binarized_obj))
             .await
@@ -80,5 +80,11 @@ impl FrameSender for SRTFrameSender {
 
     fn handle_feedback(&mut self, message: FeedbackMessage) {
         debug!("Feedback message: {:?}", message);
+
+        /*match message {
+            FeedbackMessage::HighFrameDelay(delay) => {
+                self.socket.settings().send_tsbpd_latency = Duration::from_millis(delay as u64);
+            }
+        };*/
     }
 }

@@ -27,10 +27,9 @@ pub struct SRTFrameReceiver {
 }
 
 impl SRTFrameReceiver {
-    pub async fn new(server_address: &str, latency: Duration) -> Self {
+    pub async fn new(server_address: &str) -> Self {
         info!("Connecting...");
         let socket = SrtSocket::builder()
-            .latency(latency)
             .call(server_address, None)
             .await
             .unwrap();
