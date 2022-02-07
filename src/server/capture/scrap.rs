@@ -1,10 +1,14 @@
+use async_trait::async_trait;
 use log::debug;
 use scrap::{Capturer, Display, Frame};
 
 use core::slice;
 use std::io::ErrorKind::WouldBlock;
 
-use crate::{common::feedback::FeedbackMessage, server::types::ServerFrameData};
+use crate::{
+    common::feedback::FeedbackMessage,
+    server::{traits::FrameProcessor, types::ServerFrameData},
+};
 
 use super::FrameCapturer;
 
@@ -26,10 +30,10 @@ impl ScrapFrameCapturer {
         let capturer = Capturer::new(display).expect("Couldn't begin capture.");
         Self { capturer }
     }
-}
 
-impl FrameCapturer for ScrapFrameCapturer {
-    fn capture(&mut self, frame_data: &mut ServerFrameData) {
+    fn capture_on_frame_data(&mut self, frame_data: &mut ServerFrameData) {
+        debug!("Capturing...");
+
         match self.capturer.frame() {
             Ok(buffer) => {
                 let frame_slice = unsafe { slice::from_raw_parts(buffer.as_ptr(), buffer.len()) };
@@ -43,6 +47,12 @@ impl FrameCapturer for ScrapFrameCapturer {
             }
         }
     }
+}
+
+impl FrameCapturer for ScrapFrameCapturer {
+    fn capture(&mut self, frame_data: &mut ServerFrameData) {
+        self.capture_on_frame_data(frame_data);
+    }
 
     fn width(&self) -> usize {
         self.capturer.width()
@@ -54,5 +64,13 @@ impl FrameCapturer for ScrapFrameCapturer {
 
     fn handle_feedback(&mut self, message: FeedbackMessage) {
         debug!("Feedback message: {:?}", message);
+    }
+}
+
+#[async_trait]
+impl FrameProcessor for ScrapFrameCapturer {
+    async fn process(&mut self, mut frame_data: ServerFrameData) -> ServerFrameData {
+        self.capture_on_frame_data(&mut frame_data);
+        frame_data
     }
 }

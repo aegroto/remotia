@@ -8,3 +8,5 @@ pub mod pipeline;
 pub mod utils;
 pub mod types;
 
+pub mod traits;
+
