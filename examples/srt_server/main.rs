@@ -103,7 +103,7 @@ async fn main() -> std::io::Result<()> {
     ));
 
     let frame_sender = Box::new(
-        SRTFrameSender::new(5001, Duration::from_millis(10), Duration::from_millis(500)).await,
+        SRTFrameSender::new(5001, Duration::from_millis(1000)).await,
     );
 
     let pipeline = SiloServerPipeline::new(SiloServerConfiguration {

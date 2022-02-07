@@ -47,8 +47,7 @@ pub async fn setup_frame_receiver_by_name(
         "srt" => Ok(Box::new(
             SRTFrameReceiver::new(
                 &server_address.to_string(),
-                Duration::from_millis(10),
-                Duration::from_millis(50),
+                Duration::from_millis(10)
             )
             .await,
         )),

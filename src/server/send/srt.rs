@@ -11,7 +11,7 @@ use futures::{stream, SinkExt, StreamExt};
 
 use log::{debug, info, warn};
 use serde::Serialize;
-use srt_tokio::{SrtSocket, SrtSocketBuilder};
+use srt_tokio::{SrtSocket, SrtSocketBuilder, options::{PacketSize, ByteCount}};
 use tokio::time::timeout;
 
 use crate::{
@@ -25,24 +25,25 @@ use crate::{
 use super::FrameSender;
 
 pub struct SRTFrameSender {
-    socket: SrtSocket,
-
-    timeout: Duration,
+    socket: SrtSocket
 }
 
 impl SRTFrameSender {
-    pub async fn new(port: u16, latency: Duration, timeout: Duration) -> Self {
+    pub async fn new(port: u16, latency: Duration) -> Self {
         info!("Listening...");
-        let socket = SrtSocketBuilder::new_listen()
+        let socket = SrtSocket::builder()
             .latency(latency)
-            .local_port(port)
-            .connect()
+            .set(|options| {
+                options.sender.buffer_size = ByteCount(1280 * 720 * 4 * 16);
+                options.sender.max_payload_size = PacketSize(1280 * 720 * 4);
+            })
+            .listen_on(port)
             .await
             .unwrap();
 
         info!("Connected");
 
-        Self { socket, timeout }
+        Self { socket }
     }
 }
 
@@ -68,6 +69,9 @@ impl FrameSender for SRTFrameSender {
             frame_pixels: frame_buffer.to_vec(),
         };
         let binarized_obj = Bytes::from(bincode::serialize(&obj).unwrap());
+
+        // let chunks = binarized_obj.chunks(512);
+
         self.socket
             .send((Instant::now(), binarized_obj))
             .await
