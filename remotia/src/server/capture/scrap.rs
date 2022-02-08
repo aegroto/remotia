@@ -31,6 +31,14 @@ impl ScrapFrameCapturer {
         Self { capturer }
     }
 
+    pub fn width(&self) -> usize {
+        self.capturer.width()
+    }
+
+    pub fn height(&self) -> usize {
+        self.capturer.height()
+    }
+
     fn capture_on_frame_data(&mut self, frame_data: &mut ServerFrameData) {
         debug!("Capturing...");
 
@@ -55,11 +63,11 @@ impl FrameCapturer for ScrapFrameCapturer {
     }
 
     fn width(&self) -> usize {
-        self.capturer.width()
+        self.width()
     }
 
     fn height(&self) -> usize {
-        self.capturer.height()
+        self.height()
     }
 
     fn handle_feedback(&mut self, message: FeedbackMessage) {

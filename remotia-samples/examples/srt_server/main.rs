@@ -16,14 +16,21 @@ use remotia::{
 async fn main() -> std::io::Result<()> {
     env_logger::init();
     // Pipeline structure
-
-    let capture_component = Component::new()
-        .add(ScrapFrameCapturer::new_from_primary());
-
     let pipeline = AscodePipeline::new()
-        .add(capture_component);
+        .add(initialize_capture_component());
 
     pipeline.run().await;
 
     Ok(())
+}
+
+fn initialize_capture_component() -> Component {
+    let capturer = ScrapFrameCapturer::new_from_primary();
+    let raw_frame_buffer_size = capturer.width() * capturer.height() * 4;
+
+    let capture_component = Component::new()
+        .add(BufferAllocator::new("raw_frame_buffer", raw_frame_buffer_size))
+        .add(capturer);
+
+
 }
