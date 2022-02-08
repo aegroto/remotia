@@ -1,7 +1,8 @@
 use log::debug;
 use rsmpeg::{avcodec::AVCodecContext, avutil::AVFrame, error::RsmpegError};
 
-pub mod frame_builders;
+#[allow(dead_code)]
+mod frame_builders;
 
 pub mod h264;
 // pub mod h264rgb;

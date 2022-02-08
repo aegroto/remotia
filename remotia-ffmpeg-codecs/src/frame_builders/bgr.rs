@@ -1,5 +1,5 @@
 use log::debug;
-use rsmpeg::{avcodec::AVCodecContext, avutil::AVFrame, error::RsmpegError};
+use rsmpeg::{avcodec::AVCodecContext, avutil::AVFrame};
 
 pub struct BGRAVFrameBuilder {
     frame_count: i64,

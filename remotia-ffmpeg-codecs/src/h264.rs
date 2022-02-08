@@ -1,27 +1,21 @@
 #![allow(dead_code)]
 
-use std::{
-    ffi::{CStr, CString},
-    ptr::NonNull,
-};
+use std::{ffi::CString, ptr::NonNull};
 
-use bytes::{Bytes, BytesMut};
 use log::{debug, info};
+use remotia::{
+    common::feedback::FeedbackMessage,
+    server::{encode::Encoder, traits::FrameProcessor, types::ServerFrameData},
+};
 use rsmpeg::{
     avcodec::{AVCodec, AVCodecContext},
-    avutil::{AVDictionary, AVFrame},
-    error::RsmpegError,
+    avutil::AVDictionary,
     ffi,
 };
 
 use async_trait::async_trait;
 
 use cstr::cstr;
-
-use crate::{
-    common::feedback::FeedbackMessage,
-    server::{encode::Encoder, error::ServerError, types::ServerFrameData},
-};
 
 use super::{frame_builders::yuv420p::YUV420PAVFrameBuilder, FFMpegEncodingBridge};
 
@@ -107,6 +101,37 @@ impl H264Encoder {
         self.state.increase_network_stability(0.001);
         self.try_encoder_reconfigure();
     }
+
+    fn encode_on_frame_data(&mut self, frame_data: &mut ServerFrameData) {
+        let key_frame = self.state.encoded_frames % 4 == 0;
+        debug!("Encoding using x264 (keyframe = {})...", key_frame);
+
+        let input_buffer = frame_data
+            .extract_writable_buffer("raw_frame_buffer")
+            .expect("No raw frame buffer in frame DTO");
+        let mut output_buffer = frame_data
+            .extract_writable_buffer("encoded_frame_buffer")
+            .expect("No encoded frame buffer in frame DTO");
+
+        let avframe = self.yuv420_avframe_builder.create_avframe(
+            &mut self.encode_context,
+            &input_buffer,
+            key_frame,
+        );
+
+        let encoded_bytes = self.ffmpeg_encoding_bridge.encode_avframe(
+            &mut self.encode_context,
+            avframe,
+            &mut output_buffer,
+        );
+
+        self.state.encoded_frames += 1;
+
+        frame_data.insert_writable_buffer("raw_frame_buffer", input_buffer);
+        frame_data.insert_writable_buffer("encoded_frame_buffer", output_buffer);
+
+        frame_data.set("encoded_size", encoded_bytes as u128);
+    }
 }
 
 fn init_encoder(width: i32, height: i32, crf: u32) -> AVCodecContext {
@@ -134,37 +159,19 @@ fn init_encoder(width: i32, height: i32, crf: u32) -> AVCodecContext {
 }
 
 #[async_trait]
+impl FrameProcessor for H264Encoder {
+    async fn process(&mut self, mut frame_data: ServerFrameData) -> ServerFrameData {
+        self.encode_on_frame_data(&mut frame_data);
+        frame_data
+    }
+}
+
+// retro-compatibility for silo pipeline
+#[async_trait]
 impl Encoder for H264Encoder {
     async fn encode(&mut self, frame_data: &mut ServerFrameData) {
         self.perform_quality_increase();
-
-        let key_frame = self.state.encoded_frames % 4 == 0;
-
-        let input_buffer = frame_data
-            .extract_writable_buffer("raw_frame_buffer")
-            .expect("No raw frame buffer in frame DTO");
-        let mut output_buffer = frame_data
-            .extract_writable_buffer("encoded_frame_buffer")
-            .expect("No encoded frame buffer in frame DTO");
-
-        let avframe = self.yuv420_avframe_builder.create_avframe(
-            &mut self.encode_context,
-            &input_buffer,
-            key_frame,
-        );
-
-        let encoded_bytes = self.ffmpeg_encoding_bridge.encode_avframe(
-            &mut self.encode_context,
-            avframe,
-            &mut output_buffer,
-        );
-
-        self.state.encoded_frames += 1;
-
-        frame_data.insert_writable_buffer("raw_frame_buffer", input_buffer);
-        frame_data.insert_writable_buffer("encoded_frame_buffer", output_buffer);
-
-        frame_data.set("encoded_size", encoded_bytes as u128);
+        self.encode_on_frame_data(frame_data);
     }
 
     fn handle_feedback(&mut self, message: FeedbackMessage) {

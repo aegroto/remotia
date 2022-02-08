@@ -7,7 +7,6 @@ use super::{error::ServerError, types::ServerFrameData};
 use async_trait::async_trait;
 
 // pub mod identity;
-pub mod ffmpeg;
 pub mod pool;
 
 #[async_trait]
