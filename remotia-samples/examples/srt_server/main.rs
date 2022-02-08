@@ -1,5 +1,4 @@
 use remotia::{
-    common::command_line::parse_canvas_resolution_str,
     server::{
         capture::scrap::ScrapFrameCapturer,
         pipeline::ascode::{AscodePipeline, component::Component},
@@ -24,6 +23,7 @@ fn initialize_capture_component() -> Component {
     let raw_frame_buffer_size = capturer.width() * capturer.height() * 4;
 
     Component::new()
+        .with_tick(100)
         .add(BufferAllocator::new("raw_frame_buffer", raw_frame_buffer_size))
         .add(capturer)
 }
