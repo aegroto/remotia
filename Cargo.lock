@@ -1359,6 +1359,8 @@ dependencies = [
 name = "remotia-buffer-utils"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
+ "bytes 1.1.0",
  "remotia",
 ]
 

@@ -2,15 +2,10 @@ use remotia::{
     common::command_line::parse_canvas_resolution_str,
     server::{
         capture::scrap::ScrapFrameCapturer,
-        encode::ffmpeg::h264::H264Encoder,
-        profiling::{
-            console::{errors::ConsoleServerErrorsProfiler, stats::ConsoleServerStatsProfiler},
-            tcp::TCPServerProfiler,
-            ServerProfiler,
-        },
-        send::srt::SRTFrameSender, pipeline::ascode::{AscodePipeline, component::Component},
+        pipeline::ascode::{AscodePipeline, component::Component},
     },
 };
+use remotia_buffer_utils::BufferAllocator;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {
@@ -28,9 +23,7 @@ fn initialize_capture_component() -> Component {
     let capturer = ScrapFrameCapturer::new_from_primary();
     let raw_frame_buffer_size = capturer.width() * capturer.height() * 4;
 
-    let capture_component = Component::new()
+    Component::new()
         .add(BufferAllocator::new("raw_frame_buffer", raw_frame_buffer_size))
-        .add(capturer);
-
-
+        .add(capturer)
 }
