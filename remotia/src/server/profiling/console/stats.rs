@@ -2,7 +2,8 @@ use std::time::{Duration, Instant};
 
 use crate::{
     common::feedback::FeedbackMessage,
-    server::{profiling::ServerProfiler, types::ServerFrameData},
+    server::{profiling::ServerProfiler},
+    types::FrameData,
 };
 
 use async_trait::async_trait;
@@ -15,7 +16,7 @@ pub struct ConsoleServerStatsProfiler {
 
     pub current_round_start: Instant,
 
-    pub logged_frames: Vec<ServerFrameData>,
+    pub logged_frames: Vec<FrameData>,
 
     pub log_errors: bool,
 }
@@ -68,7 +69,7 @@ impl ConsoleServerStatsProfiler {
 
 #[async_trait]
 impl ServerProfiler for ConsoleServerStatsProfiler {
-    fn log_frame(&mut self, frame_data: ServerFrameData) {
+    fn log_frame(&mut self, frame_data: FrameData) {
         if !self.log_errors && frame_data.get_error().is_some() {
             return;
         }
@@ -86,7 +87,7 @@ impl ServerProfiler for ConsoleServerStatsProfiler {
     }
 }
 
-fn get_frame_stat(frame: &ServerFrameData, key: &str) -> u128 {
+fn get_frame_stat(frame: &FrameData, key: &str) -> u128 {
     if frame.has(key) {
         frame.get(key)
     } else {

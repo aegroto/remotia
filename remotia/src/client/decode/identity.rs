@@ -1,6 +1,6 @@
 use log::debug;
 
-use crate::{client::error::ClientError, common::feedback::FeedbackMessage};
+use crate::{error::DropReason, common::feedback::FeedbackMessage};
 
 use async_trait::async_trait;
 
@@ -26,7 +26,7 @@ impl Decoder for IdentityDecoder {
         &mut self,
         input_buffer: &[u8],
         output_buffer: &mut [u8],
-    ) -> Result<usize, ClientError> {
+    ) -> Result<usize, DropReason> {
         output_buffer.copy_from_slice(input_buffer);
 
         Ok(output_buffer.len())

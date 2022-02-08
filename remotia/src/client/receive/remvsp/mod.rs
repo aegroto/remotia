@@ -17,7 +17,7 @@ use tokio::{
 };
 
 use crate::{
-    client::error::ClientError,
+    error::DropReason,
     common::{
         feedback::FeedbackMessage,
         network::remvsp::{RemVSPFrameFragment, RemVSPFrameHeader},
@@ -114,7 +114,7 @@ impl FrameReceiver for RemVSPFrameReceiver {
     async fn receive_encoded_frame(
         &mut self,
         encoded_frame_buffer: &mut [u8],
-    ) -> Result<ReceivedFrame, ClientError> {
+    ) -> Result<ReceivedFrame, DropReason> {
         let result = {
             debug!("Pulling frame...");
             let received_frame = self
@@ -125,11 +125,11 @@ impl FrameReceiver for RemVSPFrameReceiver {
 
             match received_frame {
                 Some(v) => Ok(v),
-                None => Err(ClientError::NoCompleteFrames),
+                None => Err(DropReason::NoCompleteFrames),
             }
         };
 
-        if let Err(ClientError::NoCompleteFrames) = result {
+        if let Err(DropReason::NoCompleteFrames) = result {
             debug!("Null pulled frame, throttling...");
             tokio::time::sleep(self.config.frame_pull_interval).await;
         }

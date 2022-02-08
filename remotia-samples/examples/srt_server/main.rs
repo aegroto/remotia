@@ -45,7 +45,7 @@ fn initialize_capture_component() -> (usize, usize, Component) {
     let buffer_size = width * height * 4;
 
     let component = Component::new()
-        .with_tick(100)
+        .with_tick(1000)
         .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
         .add(capturer);
 

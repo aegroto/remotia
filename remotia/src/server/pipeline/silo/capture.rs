@@ -16,11 +16,11 @@ use tokio::{
     task::JoinHandle,
 };
 
-use crate::{common::{feedback::FeedbackMessage, helpers::silo::channel_pull}, server::{capture::FrameCapturer, types::ServerFrameData}};
+use crate::{common::{feedback::FeedbackMessage, helpers::silo::channel_pull}, server::{capture::FrameCapturer}, types::FrameData};
 
 pub struct CaptureResult {
     pub capture_time: Instant,
-    pub frame_data: ServerFrameData,
+    pub frame_data: FrameData,
 }
 
 pub fn launch_capture_thread(
@@ -44,7 +44,7 @@ pub fn launch_capture_thread(
             let (raw_frame_buffer, raw_frame_buffer_wait_time) =
                 pull_raw_buffer(&mut raw_frame_buffers_receiver).await;
 
-            let mut frame_data = ServerFrameData::default();
+            let mut frame_data = FrameData::default();
 
             frame_data.insert_writable_buffer("raw_frame_buffer", raw_frame_buffer);
 
@@ -83,7 +83,7 @@ fn push_result(
 
 fn capture(
     frame_capturer: &mut Box<dyn FrameCapturer + Send>,
-    frame_data: &mut ServerFrameData,
+    frame_data: &mut FrameData,
 ) -> (Instant, u128) {
     debug!("Capturing frame...");
     let capture_start_time = Instant::now();

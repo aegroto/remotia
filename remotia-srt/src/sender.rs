@@ -8,7 +8,9 @@ use futures::SinkExt;
 use log::{debug, info};
 use remotia::{
     common::{feedback::FeedbackMessage, network::FrameBody},
-    server::{send::FrameSender, traits::FrameProcessor, types::ServerFrameData},
+    server::send::FrameSender,
+    traits::FrameProcessor,
+    types::FrameData,
 };
 use srt_tokio::{
     options::{ByteCount, PacketSize},
@@ -36,7 +38,7 @@ impl SRTFrameSender {
         Self { socket }
     }
 
-    async fn send_frame_data(&mut self, frame_data: &mut ServerFrameData) {
+    async fn send_frame_data(&mut self, frame_data: &mut FrameData) {
         let capture_timestamp = frame_data.get("capture_timestamp");
 
         // Extract the slice of the encoded buffer which contains data to be transmitted
@@ -66,7 +68,7 @@ impl SRTFrameSender {
 
 #[async_trait]
 impl FrameProcessor for SRTFrameSender {
-    async fn process(&mut self, mut frame_data: ServerFrameData) -> ServerFrameData {
+    async fn process(&mut self, mut frame_data: FrameData) -> FrameData {
         self.send_frame_data(&mut frame_data).await;
         frame_data
     }
@@ -75,7 +77,7 @@ impl FrameProcessor for SRTFrameSender {
 // retro-compatibility with silo pipeline
 #[async_trait]
 impl FrameSender for SRTFrameSender {
-    async fn send_frame(&mut self, frame_data: &mut ServerFrameData) {
+    async fn send_frame(&mut self, frame_data: &mut FrameData) {
         self.send_frame_data(frame_data).await;
     }
 

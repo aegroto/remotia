@@ -11,8 +11,9 @@ use tokio::{
 };
 
 use crate::{
-    client::{decode::Decoder, error::ClientError, profiling::ReceivedFrameStats},
+    client::{decode::Decoder, profiling::ReceivedFrameStats},
     common::{feedback::FeedbackMessage, helpers::silo::channel_pull},
+    error::DropReason,
 };
 
 use super::receive::ReceiveResult;
@@ -55,7 +56,8 @@ pub fn launch_decode_thread(
                     received_frame,
                     &mut raw_frame_buffer,
                     &mut frame_stats,
-                ).await;
+                )
+                .await;
 
                 update_decoding_stats(
                     &mut frame_stats,
@@ -134,10 +136,12 @@ async fn decode(
 ) -> u128 {
     debug!("Sending the encoded frame to the decoder...");
     let decoding_start_time = Instant::now();
-    let decoder_result = decoder.decode(
-        &encoded_frame_buffer[..received_frame.buffer_size],
-        raw_frame_buffer,
-    ).await;
+    let decoder_result = decoder
+        .decode(
+            &encoded_frame_buffer[..received_frame.buffer_size],
+            raw_frame_buffer,
+        )
+        .await;
     let decoding_time = decoding_start_time.elapsed().as_millis();
     if decoder_result.is_err() {
         frame_stats.error = Some(decoder_result.unwrap_err());

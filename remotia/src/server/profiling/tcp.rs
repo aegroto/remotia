@@ -1,22 +1,27 @@
-use std::{io::Read, net::{TcpListener, TcpStream}, sync::Arc};
+use std::{
+    io::Read,
+    net::{TcpListener, TcpStream},
+    sync::Arc,
+};
 
 use log::{debug, info};
 use tokio::sync::Mutex;
 
 use async_trait::async_trait;
 
-use crate::{common::feedback::FeedbackMessage, server::types::ServerFrameData};
+use crate::common::feedback::FeedbackMessage;
+use crate::types::FrameData;
 
 use super::ServerProfiler;
 
 pub struct TCPServerProfiler {
-    feedbacks: Arc<Mutex<Vec<FeedbackMessage>>>
+    feedbacks: Arc<Mutex<Vec<FeedbackMessage>>>,
 }
 
 impl TCPServerProfiler {
     pub fn connect() -> Self {
         let obj = Self {
-            feedbacks: Arc::new(Mutex::new(Vec::new()))
+            feedbacks: Arc::new(Mutex::new(Vec::new())),
         };
 
         obj.run_reception_loop();
@@ -31,7 +36,7 @@ impl TCPServerProfiler {
             let listener = TcpListener::bind("127.0.0.1:5011").unwrap();
             info!("Waiting for client profiler connection...");
             let (mut socket, _) = listener.accept().unwrap();
-            
+
             let mut read_buffer = vec![0; 512];
 
             loop {
@@ -47,7 +52,7 @@ impl TCPServerProfiler {
 
 #[async_trait]
 impl ServerProfiler for TCPServerProfiler {
-    fn log_frame(&mut self, _frame_data: ServerFrameData) { }
+    fn log_frame(&mut self, _frame_data: FrameData) {}
 
     async fn pull_feedback(&mut self) -> Option<FeedbackMessage> {
         self.feedbacks.lock().await.pop()

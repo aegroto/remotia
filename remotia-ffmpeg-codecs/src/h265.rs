@@ -12,7 +12,7 @@ use rsmpeg::{
 use cstr::cstr;
 use async_trait::async_trait;
 
-use crate::{common::feedback::FeedbackMessage, server::{encode::Encoder, error::ServerError}};
+use crate::{common::feedback::FeedbackMessage, server::{encode::Encoder, error::DropReason}};
 
 use super::{frame_builders::yuv420p::YUV420PAVFrameBuilder, FFMpegEncodingBridge};
 
@@ -69,7 +69,7 @@ impl Encoder for H265Encoder {
         &mut self,
         input_buffer: Bytes,
         mut output_buffer: &mut BytesMut,
-    ) -> Result<usize, ServerError> {
+    ) -> Result<usize, DropReason> {
         let avframe = self.yuv420_avframe_builder.create_avframe(
             &mut self.encode_context,
             &input_buffer,

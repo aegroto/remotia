@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use crate::{client::error::ClientError, common::feedback::FeedbackMessage};
+use crate::{error::DropReason, common::feedback::FeedbackMessage};
 
 use async_trait::async_trait;
 
@@ -14,6 +14,6 @@ mod utils;
 
 #[async_trait]
 pub trait Decoder {
-    async fn decode(&mut self, input_buffer: &[u8], output_buffer: &mut [u8]) -> Result<usize, ClientError>;
+    async fn decode(&mut self, input_buffer: &[u8], output_buffer: &mut [u8]) -> Result<usize, DropReason>;
     fn handle_feedback(&mut self, message: FeedbackMessage);
 }

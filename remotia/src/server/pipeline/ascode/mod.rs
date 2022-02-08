@@ -1,7 +1,7 @@
 use log::info;
 use tokio::sync::mpsc;
 
-use crate::server::types::ServerFrameData;
+use crate::types::FrameData;
 
 use self::component::Component;
 
@@ -28,7 +28,7 @@ impl AscodePipeline {
         info!("Binding channels...");
 
         for i in 0..self.components.len()-1 {
-            let (sender, receiver) = mpsc::unbounded_channel::<ServerFrameData>();
+            let (sender, receiver) = mpsc::unbounded_channel::<FrameData>();
 
             let src_component = self.components.get_mut(i).unwrap();
             src_component.set_sender(sender);

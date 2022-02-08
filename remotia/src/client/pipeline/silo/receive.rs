@@ -7,7 +7,7 @@ use tokio::sync::broadcast;
 use tokio::sync::mpsc::{UnboundedReceiver, UnboundedSender};
 use tokio::task::JoinHandle;
 
-use crate::client::error::ClientError;
+use crate::error::DropReason;
 use crate::client::profiling::ReceivedFrameStats;
 use crate::client::receive::{FrameReceiver, ReceivedFrame};
 use crate::common::feedback::FeedbackMessage;
@@ -113,7 +113,7 @@ fn initialize_frame_stats(
     reception_time: u128,
     reception_delay: u128,
     encoded_frame_buffer_wait_time: u128,
-    error: Option<ClientError>,
+    error: Option<DropReason>,
 ) -> ReceivedFrameStats {
     let mut frame_stats = ReceivedFrameStats::default();
     frame_stats.reception_time = reception_time;
@@ -123,7 +123,7 @@ fn initialize_frame_stats(
     frame_stats
 }
 
-fn calculate_reception_delay(receive_result: &Result<ReceivedFrame, ClientError>) -> u128 {
+fn calculate_reception_delay(receive_result: &Result<ReceivedFrame, DropReason>) -> u128 {
     let reception_delay = if receive_result.is_ok() {
         let received_frame = receive_result.as_ref().unwrap();
         received_frame.reception_delay
@@ -136,7 +136,7 @@ fn calculate_reception_delay(receive_result: &Result<ReceivedFrame, ClientError>
 async fn receive(
     frame_receiver: &mut Box<dyn FrameReceiver + Send>,
     encoded_frame_buffer: &mut BytesMut,
-) -> (Result<ReceivedFrame, ClientError>, u128) {
+) -> (Result<ReceivedFrame, DropReason>, u128) {
     debug!("Receiving...");
     let reception_start_time = Instant::now();
     let receive_result = frame_receiver

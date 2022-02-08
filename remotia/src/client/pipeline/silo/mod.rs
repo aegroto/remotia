@@ -30,7 +30,7 @@ use tokio::sync::mpsc;
 use zstring::zstr;
 
 use crate::client::decode::Decoder;
-use crate::client::error::ClientError;
+use crate::error::DropReason;
 use crate::client::pipeline::silo::decode::launch_decode_thread;
 use crate::client::pipeline::silo::decode::DecodeResult;
 use crate::client::pipeline::silo::profile::launch_profile_thread;

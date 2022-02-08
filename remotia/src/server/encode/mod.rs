@@ -2,7 +2,8 @@ use bytes::{Bytes, BytesMut};
 
 use crate::common::feedback::FeedbackMessage;
 
-use super::{error::ServerError, types::ServerFrameData};
+use crate::error::DropReason;
+use crate::types::FrameData;
 
 use async_trait::async_trait;
 
@@ -11,6 +12,6 @@ pub mod pool;
 
 #[async_trait]
 pub trait Encoder {
-    async fn encode(&mut self, frame_data: &mut ServerFrameData);
+    async fn encode(&mut self, frame_data: &mut FrameData);
     fn handle_feedback(&mut self, message: FeedbackMessage);
 }

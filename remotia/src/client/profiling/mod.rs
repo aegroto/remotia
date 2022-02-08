@@ -11,7 +11,7 @@ use crate::common::feedback::FeedbackMessage;
 
 use self::logging::{ReceptionRoundLogger, console::ReceptionRoundConsoleLogger};
 
-use super::error::ClientError;
+use crate::error::DropReason;
 
 use async_trait::async_trait;
 
@@ -37,7 +37,7 @@ pub struct ReceivedFrameStats {
     pub decoder_idle_time: u128,
     pub renderer_idle_time: u128,
 
-    pub error: Option<ClientError>,
+    pub error: Option<DropReason>,
 }
 
 pub struct ReceptionRoundStats {

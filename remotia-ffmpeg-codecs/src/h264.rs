@@ -4,8 +4,8 @@ use std::{ffi::CString, ptr::NonNull};
 
 use log::{debug, info};
 use remotia::{
-    common::feedback::FeedbackMessage,
-    server::{encode::Encoder, traits::FrameProcessor, types::ServerFrameData},
+    common::feedback::FeedbackMessage, server::encode::Encoder, traits::FrameProcessor,
+    types::FrameData,
 };
 use rsmpeg::{
     avcodec::{AVCodec, AVCodecContext},
@@ -102,7 +102,7 @@ impl H264Encoder {
         self.try_encoder_reconfigure();
     }
 
-    fn encode_on_frame_data(&mut self, frame_data: &mut ServerFrameData) {
+    fn encode_on_frame_data(&mut self, frame_data: &mut FrameData) {
         let key_frame = self.state.encoded_frames % 4 == 0;
         debug!("Encoding using x264 (keyframe = {})...", key_frame);
 
@@ -160,7 +160,7 @@ fn init_encoder(width: i32, height: i32, crf: u32) -> AVCodecContext {
 
 #[async_trait]
 impl FrameProcessor for H264Encoder {
-    async fn process(&mut self, mut frame_data: ServerFrameData) -> ServerFrameData {
+    async fn process(&mut self, mut frame_data: FrameData) -> FrameData {
         self.encode_on_frame_data(&mut frame_data);
         frame_data
     }
@@ -169,7 +169,7 @@ impl FrameProcessor for H264Encoder {
 // retro-compatibility for silo pipeline
 #[async_trait]
 impl Encoder for H264Encoder {
-    async fn encode(&mut self, frame_data: &mut ServerFrameData) {
+    async fn encode(&mut self, frame_data: &mut FrameData) {
         self.perform_quality_increase();
         self.encode_on_frame_data(frame_data);
     }

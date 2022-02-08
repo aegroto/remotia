@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use log::debug;
-use remotia::{server::{traits::FrameProcessor, types::ServerFrameData, capture::FrameCapturer}, common::feedback::FeedbackMessage};
+use remotia::{traits::FrameProcessor, types::FrameData, server::{capture::FrameCapturer}, common::feedback::FeedbackMessage};
 use scrap::{Capturer, Display};
 
 use core::slice;
@@ -32,7 +32,7 @@ impl ScrapFrameCapturer {
         self.capturer.height()
     }
 
-    fn capture_on_frame_data(&mut self, frame_data: &mut ServerFrameData) {
+    fn capture_on_frame_data(&mut self, frame_data: &mut FrameData) {
         debug!("Capturing...");
 
         match self.capturer.frame() {
@@ -52,7 +52,7 @@ impl ScrapFrameCapturer {
 
 #[async_trait]
 impl FrameProcessor for ScrapFrameCapturer {
-    async fn process(&mut self, mut frame_data: ServerFrameData) -> ServerFrameData {
+    async fn process(&mut self, mut frame_data: FrameData) -> FrameData {
         self.capture_on_frame_data(&mut frame_data);
         frame_data
     }
@@ -60,7 +60,7 @@ impl FrameProcessor for ScrapFrameCapturer {
 
 // retro-compatibility for silo pipeline
 impl FrameCapturer for ScrapFrameCapturer {
-    fn capture(&mut self, frame_data: &mut ServerFrameData) {
+    fn capture(&mut self, frame_data: &mut FrameData) {
         self.capture_on_frame_data(frame_data);
     }
 

@@ -2,20 +2,22 @@ use std::time::{Duration, Instant};
 
 use crate::{
     common::feedback::FeedbackMessage,
-    server::{error::ServerError, profiling::ServerProfiler, types::ServerFrameData},
+    server::profiling::ServerProfiler,
+    error::DropReason, 
+    types::FrameData,
 };
 
 use async_trait::async_trait;
 use log::info;
 
-pub struct ConsoleServerErrorsProfiler {
-    pub types_to_log: Vec<ServerError>,
+pub struct ConsoleDropReasonsProfiler {
+    pub types_to_log: Vec<DropReason>,
     pub round_duration: Duration,
     pub current_round_start: Instant,
-    pub logged_frames: Vec<ServerFrameData>,
+    pub logged_frames: Vec<FrameData>,
 }
 
-impl Default for ConsoleServerErrorsProfiler {
+impl Default for ConsoleDropReasonsProfiler {
     fn default() -> Self {
         Self {
             types_to_log: Vec::new(),
@@ -26,7 +28,7 @@ impl Default for ConsoleServerErrorsProfiler {
     }
 }
 
-impl ConsoleServerErrorsProfiler {
+impl ConsoleDropReasonsProfiler {
     fn print_round_stats(&self) {
         info!("Errors");
 
@@ -62,8 +64,8 @@ impl ConsoleServerErrorsProfiler {
 }
 
 #[async_trait]
-impl ServerProfiler for ConsoleServerErrorsProfiler {
-    fn log_frame(&mut self, frame_data: ServerFrameData) {
+impl ServerProfiler for ConsoleDropReasonsProfiler {
+    fn log_frame(&mut self, frame_data: FrameData) {
         self.logged_frames.push(frame_data);
 
         if self.current_round_start.elapsed().gt(&self.round_duration) {

@@ -3,13 +3,13 @@ use std::time::Duration;
 use log::{debug, info};
 use tokio::{sync::mpsc::{UnboundedSender, UnboundedReceiver}, task::JoinHandle, time::Interval};
 
-use crate::server::{traits::FrameProcessor, types::ServerFrameData};
+use crate::{traits::FrameProcessor, types::FrameData};
 
 pub struct Component {
     processors: Vec<Box<dyn FrameProcessor + Send>>,
 
-    receiver: Option<UnboundedReceiver<ServerFrameData>>,
-    sender: Option<UnboundedSender<ServerFrameData>>,
+    receiver: Option<UnboundedReceiver<FrameData>>,
+    sender: Option<UnboundedSender<FrameData>>,
 
     interval: Option<Interval>
 }
@@ -26,11 +26,11 @@ impl Component {
         }
     }
 
-    pub fn set_sender(&mut self, sender: UnboundedSender<ServerFrameData>) {
+    pub fn set_sender(&mut self, sender: UnboundedSender<FrameData>) {
         self.sender = Some(sender);
     }
 
-    pub fn set_receiver(&mut self, receiver: UnboundedReceiver<ServerFrameData>) {
+    pub fn set_receiver(&mut self, receiver: UnboundedReceiver<FrameData>) {
         self.receiver = Some(receiver);
     }
 
@@ -54,7 +54,7 @@ impl Component {
                 let mut frame_data = if self.receiver.is_some() {
                     self.receiver.as_mut().unwrap().recv().await.unwrap()
                 } else {
-                    ServerFrameData::default()
+                    FrameData::default()
                 };
 
                 for processor in &mut self.processors {

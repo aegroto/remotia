@@ -14,14 +14,15 @@ use async_trait::async_trait;
 use super::Encoder;
 use crate::{
     common::feedback::FeedbackMessage,
-    server::{error::ServerError, types::ServerFrameData},
+    error::DropReason,
+    types::FrameData,
 };
 
 const POOLING_INFO_SIZE: usize = 1;
 
 struct EncodingResult {
     encoding_unit: EncodingUnit,
-    frame_data: ServerFrameData,
+    frame_data: FrameData,
 }
 
 struct EncodingUnit {
@@ -73,7 +74,7 @@ impl PoolEncoder {
         buf
     }
 
-    fn push_to_unit(&mut self, frame_data: &mut ServerFrameData, mut unit: EncodingUnit) {
+    fn push_to_unit(&mut self, frame_data: &mut FrameData, mut unit: EncodingUnit) {
         let encoder_id = unit.id;
         let frame_id = frame_data.get("capture_timestamp");
         debug!("Pushing frame #{} to encoder #{}...", frame_id, encoder_id);
@@ -120,7 +121,7 @@ impl PoolEncoder {
 
 #[async_trait]
 impl Encoder for PoolEncoder {
-    async fn encode(&mut self, frame_data: &mut ServerFrameData) {
+    async fn encode(&mut self, frame_data: &mut FrameData) {
         // Push
         let chosen_encoding_unit = self.encoding_units.pop();
         let available_encoders = chosen_encoding_unit.is_some();
@@ -138,7 +139,7 @@ impl Encoder for PoolEncoder {
 
             if let Err(TryRecvError::Empty) = pull_result {
                 debug!("No encoding results");
-                frame_data.set_error(Some(ServerError::NoEncodedFrames));
+                frame_data.set_error(Some(DropReason::NoEncodedFrames));
                 return;
             }
 

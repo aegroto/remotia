@@ -2,11 +2,11 @@ use bytes::BytesMut;
 use log::debug;
 use tokio::sync::mpsc::UnboundedSender;
 
-use crate::server::types::ServerFrameData;
+use crate::types::FrameData;
 
 pub fn return_writable_buffer(
     raw_frame_buffers_sender: &UnboundedSender<BytesMut>,
-    frame_data: &mut ServerFrameData,
+    frame_data: &mut FrameData,
     buffer_id: &str,
 ) {
     if frame_data.has_writable_buffer(buffer_id) {

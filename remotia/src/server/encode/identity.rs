@@ -3,7 +3,7 @@
 use bytes::{Bytes, BytesMut};
 use log::debug;
 
-use crate::{common::feedback::FeedbackMessage, server::error::ServerError};
+use crate::{common::feedback::FeedbackMessage, error::DropReason};
 
 use async_trait::async_trait;
 
@@ -23,7 +23,7 @@ impl Encoder for IdentityEncoder {
         &mut self,
         input_buffer: Bytes,
         output_buffer: &mut BytesMut,
-    ) -> Result<usize, ServerError> {
+    ) -> Result<usize, DropReason> {
         let encoded_frame_length = input_buffer.len();
         output_buffer.copy_from_slice(&input_buffer);
         Ok(encoded_frame_length)

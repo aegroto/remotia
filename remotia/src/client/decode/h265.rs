@@ -8,7 +8,7 @@ use rsmpeg::{
 
 use cstr::cstr;
 
-use crate::{client::error::ClientError, common::feedback::FeedbackMessage};
+use crate::{error::DropReason, common::feedback::FeedbackMessage};
 use async_trait::async_trait;
 
 use super::{utils::yuv2bgr::raster, Decoder};
@@ -67,7 +67,7 @@ impl H265Decoder {
         self.decoded_yuv_to_rgb(y_data, cb_data, cr_data, output_buffer);
     }
 
-    fn parse_packets(&mut self, input_buffer: &[u8]) -> Option<ClientError> {
+    fn parse_packets(&mut self, input_buffer: &[u8]) -> Option<DropReason> {
         let mut packet = AVPacket::new();
         let mut parsed_offset = 0;
         while parsed_offset < input_buffer.len() {
@@ -87,7 +87,7 @@ impl H265Decoder {
                     Ok(_) => (),
                     Err(e) => {
                         debug!("Error on send packet: {}", e);
-                        return Some(ClientError::FFMpegSendPacketError);
+                        return Some(DropReason::FFMpegSendPacketError);
                     }
                 }
 
@@ -107,7 +107,7 @@ impl Decoder for H265Decoder {
         &mut self,
         input_buffer: &[u8],
         output_buffer: &mut [u8],
-    ) -> Result<usize, ClientError> {
+    ) -> Result<usize, DropReason> {
         if let Some(error) = self.parse_packets(input_buffer) {
             return Err(error);
         }
@@ -115,7 +115,7 @@ impl Decoder for H265Decoder {
         let avframe = match self.decode_context.receive_frame() {
             Ok(frame) => frame,
             Err(RsmpegError::DecoderDrainError) | Err(RsmpegError::DecoderFlushedError) => {
-                return Err(ClientError::NoDecodedFrames);
+                return Err(DropReason::NoDecodedFrames);
             }
             Err(e) => panic!("{:?}", e),
         };

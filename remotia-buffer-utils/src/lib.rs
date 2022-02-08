@@ -1,5 +1,5 @@
 use bytes::BytesMut;
-use remotia::server::{traits::FrameProcessor, types::ServerFrameData};
+use remotia::{traits::FrameProcessor, types::FrameData};
 
 use async_trait::async_trait;
 
@@ -25,7 +25,7 @@ impl BufferAllocator {
 
 #[async_trait]
 impl FrameProcessor for BufferAllocator {
-    async fn process(&mut self, mut frame_data: ServerFrameData) -> ServerFrameData {
+    async fn process(&mut self, mut frame_data: FrameData) -> FrameData {
         frame_data.insert_writable_buffer(&self.buffer_id, self.allocate_buffer());
         frame_data
     }

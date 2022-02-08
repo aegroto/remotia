@@ -1,6 +1,6 @@
 use log::debug;
 
-use crate::client::error::ClientError;
+use crate::error::DropReason;
 use async_trait::async_trait;
 
 use super::Decoder;
@@ -23,7 +23,7 @@ impl Decoder for PoolDecoder {
         &mut self,
         input_buffer: &[u8],
         output_buffer: &mut [u8],
-    ) -> Result<usize, ClientError> {
+    ) -> Result<usize, DropReason> {
         debug!("{:?}", &input_buffer[0..8]);
 
         let chosen_decoder_index = input_buffer[0] as usize;

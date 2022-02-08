@@ -12,13 +12,13 @@ use tokio::task::JoinHandle;
 use crate::common::feedback::FeedbackMessage;
 use crate::common::helpers::silo::channel_pull;
 use crate::server::send::FrameSender;
-use crate::server::types::ServerFrameData;
+use crate::types::FrameData;
 
 use super::encode::EncodeResult;
 use super::utils::return_writable_buffer;
 
 pub struct TransferResult {
-    pub frame_data: ServerFrameData,
+    pub frame_data: FrameData,
 }
 
 pub fn launch_transfer_thread(
@@ -70,7 +70,7 @@ pub fn launch_transfer_thread(
 
 async fn transfer(
     frame_sender: &mut Box<dyn FrameSender + Send>,
-    frame_data: &mut ServerFrameData,
+    frame_data: &mut FrameData,
 ) {
     debug!("Transmitting...");
     let transfer_start_time = Instant::now();

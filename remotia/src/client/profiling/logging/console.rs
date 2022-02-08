@@ -1,10 +1,8 @@
 use log::{debug, info};
 
 use crate::{
-    client::{
-        error::ClientError,
-        profiling::{ReceivedFrameStats, ReceptionRoundStats},
-    },
+    client::profiling::{ReceivedFrameStats, ReceptionRoundStats},
+    error::DropReason,
     field_vec, vec_avg,
 };
 
@@ -45,20 +43,29 @@ impl ReceptionRoundLogger for ReceptionRoundConsoleLogger {
 
         info!("Total dropped frames: {}, of which:", dropped_frames_count);
 
-        info!("Timeouts: {}", profiled_frames
-            .iter()
-            .filter(|frame| is_error_of_type!(&frame.error, ClientError::Timeout))
-            .count());
+        info!(
+            "Timeouts: {}",
+            profiled_frames
+                .iter()
+                .filter(|frame| is_error_of_type!(&frame.error, DropReason::Timeout))
+                .count()
+        );
 
-        info!("No complete frames: {}", profiled_frames
-            .iter()
-            .filter(|frame| is_error_of_type!(&frame.error, ClientError::NoCompleteFrames))
-            .count());
+        info!(
+            "No complete frames: {}",
+            profiled_frames
+                .iter()
+                .filter(|frame| is_error_of_type!(&frame.error, DropReason::NoCompleteFrames))
+                .count()
+        );
 
-        info!("Stale frames: {}", profiled_frames
-            .iter()
-            .filter(|frame| is_error_of_type!(&frame.error, ClientError::StaleFrame))
-            .count());
+        info!(
+            "Stale frames: {}",
+            profiled_frames
+                .iter()
+                .filter(|frame| is_error_of_type!(&frame.error, DropReason::StaleFrame))
+                .count()
+        );
 
         profiled_frames
             .iter()

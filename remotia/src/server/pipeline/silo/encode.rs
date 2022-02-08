@@ -13,13 +13,15 @@ use tokio::{
 
 use crate::{
     common::{feedback::FeedbackMessage, helpers::silo::channel_pull},
-    server::{encode::Encoder, error::ServerError, types::ServerFrameData},
+    server::{encode::Encoder},
+    error::DropReason,
+    types::FrameData,
 };
 
 use super::{capture::CaptureResult, utils::return_writable_buffer};
 
 pub struct EncodeResult {
-    pub frame_data: ServerFrameData,
+    pub frame_data: FrameData,
 }
 
 pub fn launch_encode_thread(
@@ -90,7 +92,7 @@ fn push_result(
     ControlFlow::Continue(())
 }
 
-async fn encode(encoder: &mut Box<dyn Encoder + Send>, frame_data: &mut ServerFrameData) {
+async fn encode(encoder: &mut Box<dyn Encoder + Send>, frame_data: &mut FrameData) {
     let encoding_start_time = Instant::now();
     encoder.encode(frame_data).await;
     let encoding_time = encoding_start_time.elapsed().as_millis();

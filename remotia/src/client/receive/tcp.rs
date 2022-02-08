@@ -4,7 +4,8 @@ use async_trait::async_trait;
 
 use log::debug;
 
-use crate::{client::{error::ClientError, receive::ReceivedFrame}, common::{feedback::FeedbackMessage, network::FrameBody}};
+use crate::{client::{receive::ReceivedFrame}, common::{feedback::FeedbackMessage, network::FrameBody}};
+use crate::error::DropReason;
 
 use super::FrameReceiver;
 
@@ -21,7 +22,7 @@ impl TCPFrameReceiver {
         }
     }
 
-    fn receive_frame_header(&mut self) -> Result<usize, ClientError> {
+    fn receive_frame_header(&mut self) -> Result<usize, DropReason> {
         debug!("Receiving frame header...");
 
         let mut frame_size_vec = [0 as u8; 8];
@@ -29,13 +30,13 @@ impl TCPFrameReceiver {
         let result = self.stream.read(&mut frame_size_vec);
 
         if result.is_err() {
-            return Err(ClientError::InvalidWholeFrameHeader);
+            return Err(DropReason::InvalidWholeFrameHeader);
         }
 
         Ok(usize::from_be_bytes(frame_size_vec))
     }
 
-    fn receive_frame_pixels(&mut self, binarized_obj_size: usize, encoded_frame_buffer: &mut[u8])  -> Result<ReceivedFrame, ClientError> {
+    fn receive_frame_pixels(&mut self, binarized_obj_size: usize, encoded_frame_buffer: &mut[u8])  -> Result<ReceivedFrame, DropReason> {
         debug!("Receiving {} binarized bytes...", binarized_obj_size);
 
         let mut total_read_bytes = 0;
@@ -47,7 +48,7 @@ impl TCPFrameReceiver {
             debug!("Received {} bytes", read_bytes); 
 
             if read_bytes == 0 {
-                return Err(ClientError::EmptyFrame);
+                return Err(DropReason::EmptyFrame);
             }
 
             total_read_bytes += read_bytes;
@@ -56,7 +57,7 @@ impl TCPFrameReceiver {
         debug!("Total bytes received: {}", total_read_bytes); 
 
         if total_read_bytes == 0 {
-            return Err(ClientError::EmptyFrame);
+            return Err(DropReason::EmptyFrame);
         }
 
         let frame_body = bincode::deserialize::<FrameBody>(&binarized_obj_buffer).unwrap();
@@ -74,7 +75,7 @@ impl TCPFrameReceiver {
 
 #[async_trait]
 impl FrameReceiver for TCPFrameReceiver {
-    async fn receive_encoded_frame(&mut self, encoded_frame_buffer: &mut[u8]) -> Result<ReceivedFrame, ClientError> {
+    async fn receive_encoded_frame(&mut self, encoded_frame_buffer: &mut[u8]) -> Result<ReceivedFrame, DropReason> {
         let binarized_obj_size = self.receive_frame_header()?;
 
         self.receive_frame_pixels(binarized_obj_size, encoded_frame_buffer)

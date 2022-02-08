@@ -1,9 +1,9 @@
 use crate::common::feedback::FeedbackMessage;
 
-use super::types::ServerFrameData;
+use crate::types::FrameData;
 
 pub trait FrameCapturer {
-    fn capture(&mut self, frame_data: &mut ServerFrameData);
+    fn capture(&mut self, frame_data: &mut FrameData);
 
     fn handle_feedback(&mut self, message: FeedbackMessage);
 

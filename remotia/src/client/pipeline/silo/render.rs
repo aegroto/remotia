@@ -16,9 +16,10 @@ use tokio::{
 
 use crate::{
     client::{
-        decode::Decoder, error::ClientError, profiling::ReceivedFrameStats, render::Renderer,
+        decode::Decoder, profiling::ReceivedFrameStats, render::Renderer,
     },
     common::{feedback::FeedbackMessage, helpers::silo::channel_pull},
+    error::DropReason
 };
 
 use super::decode::DecodeResult;
@@ -58,7 +59,7 @@ pub fn launch_render_thread(
                     - frame_stats.capture_timestamp;
 
                 if pre_render_frame_delay > maximum_pre_render_frame_delay {
-                    frame_stats.error = Some(ClientError::StaleFrame);
+                    frame_stats.error = Some(DropReason::StaleFrame);
                 } else {
                     let spin_start_time = Instant::now();
                     interval.tick().await;

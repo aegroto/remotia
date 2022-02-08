@@ -14,7 +14,7 @@ use rsmpeg::{
 use cstr::cstr;
 use async_trait::async_trait;
 
-use crate::{common::feedback::FeedbackMessage, server::{encode::Encoder, error::ServerError}};
+use crate::{common::feedback::FeedbackMessage, server::{encode::Encoder, error::DropReason}};
 
 use super::{
     frame_builders::{bgr::BGRAVFrameBuilder, yuv420p::YUV420PAVFrameBuilder},
@@ -89,7 +89,7 @@ impl Encoder for H264RGBEncoder {
         &mut self,
         input_buffer: Bytes,
         mut output_buffer: &mut BytesMut,
-    ) -> Result<usize, ServerError> {
+    ) -> Result<usize, DropReason> {
         let key_frame = self.state.encoded_frames % 4 == 0;
 
         let avframe = self.bgr_avframe_builder.create_avframe(

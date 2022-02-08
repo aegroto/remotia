@@ -13,7 +13,7 @@ use socket2::{Domain, Socket, Type};
 use crate::{common::{
     feedback::FeedbackMessage,
     network::remvsp::{RemVSPFrameFragment, RemVSPFrameHeader},
-}, server::types::ServerFrameData};
+}, types::FrameData};
 
 use super::FrameSender;
 
@@ -98,7 +98,7 @@ struct RemVSPTransmissionState { }
 
 #[async_trait]
 impl FrameSender for RemVSPFrameSender {
-    async fn send_frame(&mut self, frame_data: &mut ServerFrameData) {
+    async fn send_frame(&mut self, frame_data: &mut FrameData) {
         let capture_timestamp = frame_data.get("capture_timestamp");
         let encoded_size = frame_data.get("encoded_size") as usize;
         let frame_buffer = frame_data.get_writable_buffer_ref("encoded_frame_buffer").unwrap();

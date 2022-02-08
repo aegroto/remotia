@@ -8,7 +8,7 @@ use rsmpeg::{
 
 use cstr::cstr;
 
-use crate::{client::error::ClientError, common::feedback::FeedbackMessage};
+use crate::{error::DropReason, common::feedback::FeedbackMessage};
 use async_trait::async_trait;
 
 use super::{Decoder};
@@ -46,7 +46,7 @@ impl Decoder for H264RGBDecoder {
         &mut self,
         input_buffer: &[u8],
         output_buffer: &mut [u8],
-    ) -> Result<usize, ClientError> {
+    ) -> Result<usize, DropReason> {
         let mut packet = AVPacket::new();
 
         loop {
@@ -66,7 +66,7 @@ impl Decoder for H264RGBDecoder {
                     Ok(_) => (),
                     Err(e) => {
                         debug!("Error on send packet: {}", e);
-                        break Err(ClientError::FFMpegSendPacketError);
+                        break Err(DropReason::FFMpegSendPacketError);
                     }
                 }
 
