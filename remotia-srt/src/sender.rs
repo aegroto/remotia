@@ -1,31 +1,19 @@
-use std::{
-    io::Write,
-    net::TcpStream,
-    time::{Duration, Instant, SystemTime, UNIX_EPOCH},
-};
+use std::time::Instant;
 
 use async_trait::async_trait;
 
 use bytes::{Bytes, BytesMut};
-use futures::{stream, SinkExt, StreamExt};
+use futures::SinkExt;
 
-use log::{debug, info, warn};
-use serde::Serialize;
+use log::{debug, info};
+use remotia::{
+    common::{feedback::FeedbackMessage, network::FrameBody},
+    server::{send::FrameSender, traits::FrameProcessor, types::ServerFrameData},
+};
 use srt_tokio::{
     options::{ByteCount, PacketSize},
-    SrtSocket, SrtSocketBuilder,
+    SrtSocket,
 };
-use tokio::time::timeout;
-
-use crate::{
-    common::{
-        feedback::FeedbackMessage,
-        network::{FrameBody, FrameHeader},
-    },
-    server::{error::ServerError, types::ServerFrameData},
-};
-
-use super::FrameSender;
 
 pub struct SRTFrameSender {
     socket: SrtSocket,
@@ -47,11 +35,8 @@ impl SRTFrameSender {
 
         Self { socket }
     }
-}
 
-#[async_trait]
-impl FrameSender for SRTFrameSender {
-    async fn send_frame(&mut self, frame_data: &mut ServerFrameData) {
+    async fn send_frame_data(&mut self, frame_data: &mut ServerFrameData) {
         let capture_timestamp = frame_data.get("capture_timestamp");
 
         // Extract the slice of the encoded buffer which contains data to be transmitted
@@ -76,6 +61,22 @@ impl FrameSender for SRTFrameSender {
             .send((Instant::now(), binarized_obj))
             .await
             .unwrap();
+    }
+}
+
+#[async_trait]
+impl FrameProcessor for SRTFrameSender {
+    async fn process(&mut self, mut frame_data: ServerFrameData) -> ServerFrameData {
+        self.send_frame_data(&mut frame_data).await;
+        frame_data
+    }
+}
+
+// retro-compatibility with silo pipeline
+#[async_trait]
+impl FrameSender for SRTFrameSender {
+    async fn send_frame(&mut self, frame_data: &mut ServerFrameData) {
+        self.send_frame_data(frame_data).await;
     }
 
     fn handle_feedback(&mut self, message: FeedbackMessage) {

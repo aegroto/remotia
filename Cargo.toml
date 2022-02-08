@@ -6,5 +6,6 @@ members = [
     "remotia-buffer-utils",
     "remotia-samples",
     "remotia-core-capturers",
-    "remotia-ffmpeg-codecs"
+    "remotia-ffmpeg-codecs",
+    "remotia-srt"
 ]

@@ -10,7 +10,6 @@ use super::types::ServerFrameData;
 
 pub mod remvsp;
 pub mod tcp;
-pub mod srt;
 
 #[async_trait]
 pub trait FrameSender {
