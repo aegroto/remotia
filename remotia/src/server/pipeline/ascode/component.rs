@@ -26,6 +26,14 @@ impl Component {
         }
     }
 
+    pub fn set_sender(&mut self, sender: UnboundedSender<ServerFrameData>) {
+        self.sender = Some(sender);
+    }
+
+    pub fn set_receiver(&mut self, receiver: UnboundedReceiver<ServerFrameData>) {
+        self.receiver = Some(receiver);
+    }
+
     pub fn with_tick(mut self, tick_interval: u64) -> Self {
         self.interval = Some(tokio::time::interval(Duration::from_millis(tick_interval)));
         self

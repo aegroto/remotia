@@ -1,4 +1,7 @@
 use log::info;
+use tokio::sync::mpsc;
+
+use crate::server::types::ServerFrameData;
 
 use self::component::Component;
 
@@ -20,9 +23,19 @@ impl AscodePipeline {
         self
     }
 
-    pub async fn run(self) {
+    pub async fn run(mut self) {
         // Bind channels
         info!("Binding channels...");
+
+        for i in 0..self.components.len()-1 {
+            let (sender, receiver) = mpsc::unbounded_channel::<ServerFrameData>();
+
+            let src_component = self.components.get_mut(i).unwrap();
+            src_component.set_sender(sender);
+
+            let dst_component = self.components.get_mut(i + 1).unwrap();
+            dst_component.set_receiver(receiver);
+        }
         // TODO
 
         // Launch threads
