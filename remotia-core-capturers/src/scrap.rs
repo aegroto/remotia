@@ -1,16 +1,9 @@
 use async_trait::async_trait;
 use log::debug;
-use scrap::{Capturer, Display, Frame};
+use remotia::{server::{traits::FrameProcessor, types::ServerFrameData, capture::FrameCapturer}, common::feedback::FeedbackMessage};
+use scrap::{Capturer, Display};
 
 use core::slice;
-use std::io::ErrorKind::WouldBlock;
-
-use crate::{
-    common::feedback::FeedbackMessage,
-    server::{traits::FrameProcessor, types::ServerFrameData},
-};
-
-use super::FrameCapturer;
 
 pub struct ScrapFrameCapturer {
     capturer: Capturer,
@@ -57,6 +50,15 @@ impl ScrapFrameCapturer {
     }
 }
 
+#[async_trait]
+impl FrameProcessor for ScrapFrameCapturer {
+    async fn process(&mut self, mut frame_data: ServerFrameData) -> ServerFrameData {
+        self.capture_on_frame_data(&mut frame_data);
+        frame_data
+    }
+}
+
+// retro-compatibility for silo pipeline
 impl FrameCapturer for ScrapFrameCapturer {
     fn capture(&mut self, frame_data: &mut ServerFrameData) {
         self.capture_on_frame_data(frame_data);
@@ -72,13 +74,5 @@ impl FrameCapturer for ScrapFrameCapturer {
 
     fn handle_feedback(&mut self, message: FeedbackMessage) {
         debug!("Feedback message: {:?}", message);
-    }
-}
-
-#[async_trait]
-impl FrameProcessor for ScrapFrameCapturer {
-    async fn process(&mut self, mut frame_data: ServerFrameData) -> ServerFrameData {
-        self.capture_on_frame_data(&mut frame_data);
-        frame_data
     }
 }

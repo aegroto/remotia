@@ -1,10 +1,10 @@
 use remotia::{
     server::{
-        capture::scrap::ScrapFrameCapturer,
         pipeline::ascode::{AscodePipeline, component::Component},
     },
 };
 use remotia_buffer_utils::BufferAllocator;
+use remotia_core_capturers::scrap::ScrapFrameCapturer;
 
 #[tokio::main]
 async fn main() -> std::io::Result<()> {

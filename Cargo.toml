@@ -5,4 +5,5 @@ members = [
     "remotia",
     "remotia-buffer-utils",
     "remotia-samples",
+    "remotia-core-capturers"
 ]
