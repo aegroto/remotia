@@ -1,7 +1,11 @@
 use std::time::Duration;
 
 use log::{debug, info};
-use tokio::{sync::mpsc::{UnboundedSender, UnboundedReceiver}, task::JoinHandle, time::Interval};
+use tokio::{
+    sync::mpsc::{UnboundedReceiver, UnboundedSender},
+    task::JoinHandle,
+    time::Interval,
+};
 
 use crate::{traits::FrameProcessor, types::FrameData};
 
@@ -11,10 +15,10 @@ pub struct Component {
     receiver: Option<UnboundedReceiver<FrameData>>,
     sender: Option<UnboundedSender<FrameData>>,
 
-    interval: Option<Interval>
+    interval: Option<Interval>,
 }
 
-unsafe impl Send for Component { }
+unsafe impl Send for Component {}
 
 impl Component {
     pub fn new() -> Self {
@@ -22,16 +26,8 @@ impl Component {
             processors: Vec::new(),
             receiver: None,
             sender: None,
-            interval: None
+            interval: None,
         }
-    }
-
-    pub fn set_sender(&mut self, sender: UnboundedSender<FrameData>) {
-        self.sender = Some(sender);
-    }
-
-    pub fn set_receiver(&mut self, receiver: UnboundedReceiver<FrameData>) {
-        self.receiver = Some(receiver);
     }
 
     pub fn with_tick(mut self, tick_interval: u64) -> Self {
@@ -44,7 +40,19 @@ impl Component {
         self
     }
 
-    pub fn launch(mut self) -> JoinHandle<()> {
+    //////////////////////
+    // Internal methods //
+    //////////////////////
+
+    pub(crate) fn set_sender(&mut self, sender: UnboundedSender<FrameData>) {
+        self.sender = Some(sender);
+    }
+
+    pub(crate) fn set_receiver(&mut self, receiver: UnboundedReceiver<FrameData>) {
+        self.receiver = Some(receiver);
+    }
+
+    pub(crate) fn launch(mut self) -> JoinHandle<()> {
         tokio::spawn(async move {
             loop {
                 if self.interval.is_some() {
@@ -52,7 +60,14 @@ impl Component {
                 }
 
                 let mut frame_data = if self.receiver.is_some() {
-                    Some(self.receiver.as_mut().unwrap().recv().await.expect("Receive channel closed"))
+                    Some(
+                        self.receiver
+                            .as_mut()
+                            .unwrap()
+                            .recv()
+                            .await
+                            .expect("Receive channel closed"),
+                    )
                 } else {
                     debug!("No receiver registered, allocating an empty frame DTO");
                     Some(FrameData::default())

@@ -1,9 +1,9 @@
 use std::time::Duration;
 
-use remotia::server::pipeline::ascode::{component::Component, AscodePipeline};
+use remotia::{server::pipeline::ascode::{component::Component, AscodePipeline}, processors::error_switch::OnErrorSwitch};
 use remotia_buffer_utils::BufferAllocator;
 use remotia_core_capturers::scrap::ScrapFrameCapturer;
-use remotia_core_loggers::stats::ConsoleServerStatsProfiler;
+use remotia_core_loggers::{stats::ConsoleAverageStatsLogger, printer::ConsoleFrameDataPrinter};
 use remotia_ffmpeg_codecs::encoders::h264::H264Encoder;
 use remotia_profilation_utils::time::{add::TimestampAdder, diff::TimestampDiffCalculator};
 use remotia_srt::sender::SRTFrameSender;
@@ -12,21 +12,25 @@ use remotia_srt::sender::SRTFrameSender;
 async fn main() -> std::io::Result<()> {
     env_logger::init();
 
-    // Pipeline structure
+    let error_handling_pipeline = AscodePipeline::new()
+        .add(Component::new().add(ConsoleFrameDataPrinter::new()))
+        .bind()
+        .feedable();
+
     let capturer = ScrapFrameCapturer::new_from_primary();
     let width = capturer.width();
     let height = capturer.height();
     let buffer_size = width * height * 4;
 
-    let pipeline = AscodePipeline::new()
-        .link(
+    let main_pipeline = AscodePipeline::new()
+        .add(
             Component::new()
                 .with_tick(33)
                 .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("capture_timestamp"))
                 .add(capturer),
         )
-        .link(
+        .add(
             Component::new()
                 .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("encoding_start_timestamp"))
@@ -34,18 +38,20 @@ async fn main() -> std::io::Result<()> {
                 .add(TimestampDiffCalculator::new(
                     "encoding_start_timestamp",
                     "encoding_time",
-                )),
+                ))
+                .add(OnErrorSwitch::new(&error_handling_pipeline)),
         )
-        .link(
+        .add(
             Component::new()
                 .add(TimestampAdder::new("transmission_start_timestamp"))
                 .add(SRTFrameSender::new(5001, Duration::from_millis(50)).await)
                 .add(TimestampDiffCalculator::new(
                     "transmission_start_timestamp",
                     "transmission_time",
-                )),
+                ))
+                .add(OnErrorSwitch::new(&error_handling_pipeline)),
         )
-        .link(Component::new().add(ConsoleServerStatsProfiler {
+        .add(Component::new().add(ConsoleAverageStatsLogger {
             values_to_log: vec![
                 "encoded_size".to_string(),
                 "encoding_time".to_string(),
@@ -53,9 +59,14 @@ async fn main() -> std::io::Result<()> {
             ],
 
             ..Default::default()
-        }));
+        }))
+        .bind();
 
-    pipeline.run().await;
+    let main_handle = main_pipeline.run();
+    let error_handle = error_handling_pipeline.run();
+
+    main_handle.await;
+    error_handle.await;
 
     Ok(())
 }

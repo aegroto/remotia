@@ -1,32 +1,58 @@
 use log::info;
-use tokio::sync::mpsc;
+use tokio::sync::mpsc::{self, UnboundedSender};
 
 use crate::types::FrameData;
 
-use self::component::Component;
+use self::{component::Component, feeder::AscodePipelineFeeder};
 
 pub mod component;
+pub mod feeder;
 
 pub struct AscodePipeline {
-    components: Vec<Component> 
+    components: Vec<Component>,
+    feeding_sender: Option<UnboundedSender<FrameData>>,
+
+    bound: bool
 }
 
 impl AscodePipeline {
     pub fn new() -> Self {
         Self {
-            components: Vec::new()
+            components: Vec::new(),
+            feeding_sender: None,
+
+            bound: false
         }
     }
 
-    pub fn link(mut self, component: Component) -> Self {
+    pub fn add(mut self, component: Component) -> Self {
         self.components.push(component);
         self
     }
 
-    pub async fn run(mut self) {
-        // Bind channels
-        info!("Binding channels...");
+    pub fn get_feeder(&self) -> AscodePipelineFeeder {
+        let sender = self.feeding_sender.as_ref().unwrap().clone();
+        AscodePipelineFeeder::new(sender)
+    }
 
+    pub async fn run(self) {
+        info!("Launching threads...");
+        if !self.bound {
+            panic!("Called 'run' before binding the pipeline");
+        }
+
+        let mut handles = Vec::new();
+        for component in self.components {
+            let handle = component.launch();
+            handles.push(handle);
+        }
+        for handle in handles {
+            handle.await.unwrap();
+        }
+    }
+
+    pub fn bind(mut self) -> Self {
+        info!("Binding channels...");
         for i in 0..self.components.len()-1 {
             let (sender, receiver) = mpsc::unbounded_channel::<FrameData>();
 
@@ -36,19 +62,20 @@ impl AscodePipeline {
             let dst_component = self.components.get_mut(i + 1).unwrap();
             dst_component.set_receiver(receiver);
         }
-        // TODO
 
-        // Launch threads
-        info!("Launching threads...");
-        let mut handles = Vec::new();
+        self.bound = true;
 
-        for component in self.components {
-            let handle = component.launch();
-            handles.push(handle);
-        }
+        self
+    }
 
-        for handle in handles {
-            handle.await.unwrap();
-        }
+    pub fn feedable(mut self) -> Self {
+        let head = self.components.get_mut(0).unwrap();
+
+        let (sender, receiver) = mpsc::unbounded_channel::<FrameData>();
+        self.feeding_sender = Some(sender);
+
+        head.set_receiver(receiver);
+
+        self
     }
 }

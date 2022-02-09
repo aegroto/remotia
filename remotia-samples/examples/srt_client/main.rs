@@ -1,6 +1,6 @@
 use remotia::server::pipeline::ascode::{component::Component, AscodePipeline};
 use remotia_buffer_utils::BufferAllocator;
-use remotia_core_loggers::stats::ConsoleServerStatsProfiler;
+use remotia_core_loggers::stats::ConsoleAverageStatsLogger;
 use remotia_core_renderers::beryllium::BerylliumRenderer;
 use remotia_ffmpeg_codecs::decoders::h264::H264Decoder;
 use remotia_profilation_utils::time::{add::TimestampAdder, diff::TimestampDiffCalculator};
@@ -16,7 +16,7 @@ async fn main() -> std::io::Result<()> {
 
     // Pipeline structure
     let pipeline = AscodePipeline::new()
-        .link(
+        .add(
             Component::new()
                 .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("reception_start_timestamp"))
@@ -26,7 +26,7 @@ async fn main() -> std::io::Result<()> {
                     "reception_time",
                 )),
         )
-        .link(
+        .add(
             Component::new()
                 .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("decoding_start_timestamp"))
@@ -36,7 +36,7 @@ async fn main() -> std::io::Result<()> {
                     "decoding_time",
                 )),
         )
-        .link(
+        .add(
             Component::new()
                 .add(TimestampAdder::new("rendering_start_timestamp"))
                 .add(BerylliumRenderer::new(width as u32, height as u32))
@@ -45,7 +45,7 @@ async fn main() -> std::io::Result<()> {
                     "rendering_time",
                 )),
         )
-        .link(Component::new().add(ConsoleServerStatsProfiler {
+        .add(Component::new().add(ConsoleAverageStatsLogger {
             values_to_log: vec![
                 "reception_time".to_string(),
                 "decoding_time".to_string(),
@@ -53,7 +53,8 @@ async fn main() -> std::io::Result<()> {
             ],
 
             ..Default::default()
-        }));
+        }))
+        .bind();
 
     pipeline.run().await;
 

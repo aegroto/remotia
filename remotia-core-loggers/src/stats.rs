@@ -9,7 +9,7 @@ use remotia::{
 use async_trait::async_trait;
 use log::info;
 
-pub struct ConsoleServerStatsProfiler {
+pub struct ConsoleAverageStatsLogger {
     pub header: Option<String>,
     pub values_to_log: Vec<String>,
     pub round_duration: Duration,
@@ -21,7 +21,7 @@ pub struct ConsoleServerStatsProfiler {
     pub log_errors: bool,
 }
 
-impl Default for ConsoleServerStatsProfiler {
+impl Default for ConsoleAverageStatsLogger {
     fn default() -> Self {
         Self {
             header: None,
@@ -34,7 +34,7 @@ impl Default for ConsoleServerStatsProfiler {
     }
 }
 
-impl ConsoleServerStatsProfiler {
+impl ConsoleAverageStatsLogger {
     fn print_round_stats(&self) {
         if self.header.is_some() {
             info!("{}", self.header.as_ref().unwrap());
@@ -81,7 +81,7 @@ impl ConsoleServerStatsProfiler {
 }
 
 #[async_trait]
-impl FrameProcessor for ConsoleServerStatsProfiler {
+impl FrameProcessor for ConsoleAverageStatsLogger {
     async fn process(&mut self, frame_data: FrameData) -> Option<FrameData> {
         self.log_frame_data(&frame_data);
         Some(frame_data)
@@ -90,7 +90,7 @@ impl FrameProcessor for ConsoleServerStatsProfiler {
 
 // retro-compatibility for silo pipeline
 #[async_trait]
-impl ServerProfiler for ConsoleServerStatsProfiler {
+impl ServerProfiler for ConsoleAverageStatsLogger {
     fn log_frame(&mut self, frame_data: FrameData) {
         self.log_frame_data(&frame_data);
     }
