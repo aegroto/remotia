@@ -5,7 +5,7 @@ use remotia_buffer_utils::BufferAllocator;
 use remotia_core_capturers::scrap::ScrapFrameCapturer;
 use remotia_core_loggers::stats::ConsoleServerStatsProfiler;
 use remotia_ffmpeg_codecs::encoders::h264::H264Encoder;
-use remotia_profilation_utils::time::{diff::TimestampDiffCalculator, add::TimestampAdder};
+use remotia_profilation_utils::time::{add::TimestampAdder, diff::TimestampDiffCalculator};
 use remotia_srt::sender::SRTFrameSender;
 
 #[tokio::main]
@@ -36,9 +36,21 @@ async fn main() -> std::io::Result<()> {
                     "encoding_time",
                 )),
         )
-        .add(Component::new().add(SRTFrameSender::new(5001, Duration::from_millis(50)).await))
+        .add(
+            Component::new()
+                .add(TimestampAdder::new("transmission_start_timestamp"))
+                .add(SRTFrameSender::new(5001, Duration::from_millis(50)).await)
+                .add(TimestampDiffCalculator::new(
+                    "transmission_start_timestamp",
+                    "transmission_time",
+                )),
+        )
         .add(Component::new().add(ConsoleServerStatsProfiler {
-            values_to_log: vec!["encoded_size".to_string(), "encoding_time".to_string()],
+            values_to_log: vec![
+                "encoded_size".to_string(),
+                "encoding_time".to_string(),
+                "transmission_time".to_string(),
+            ],
 
             ..Default::default()
         }));
