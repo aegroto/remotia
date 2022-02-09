@@ -38,25 +38,19 @@ impl H264Decoder {
         }
     }
 
-    fn decoded_yuv_to_rgb(
+    fn decoded_yuv_to_bgra(
         &mut self,
         y_frame_buffer: &[u8],
         u_frame_buffer: &[u8],
         v_frame_buffer: &[u8],
         output_buffer: &mut [u8],
     ) {
-        // TODO: Remove fill
-        let mut yuv420p_frame_buffer = Vec::new();
-        yuv420p_frame_buffer.extend_from_slice(y_frame_buffer);
-        yuv420p_frame_buffer.extend_from_slice(u_frame_buffer);
-        yuv420p_frame_buffer.extend_from_slice(v_frame_buffer);
-
-        debug!("y_frame_buffer len: {}", y_frame_buffer.len());
-        debug!("u_frame_buffer len: {}", u_frame_buffer.len());
-        debug!("v_frame_buffer len: {}", v_frame_buffer.len());
-        debug!("yuv420p_frame_buffer len: {}", yuv420p_frame_buffer.len());
-
-        raster::yuv_to_bgra(&yuv420p_frame_buffer, output_buffer);
+        raster::yuv_to_bgra_separate(
+            y_frame_buffer,
+            u_frame_buffer,
+            v_frame_buffer,
+            output_buffer,
+        );
     }
 
     fn write_avframe(&mut self, avframe: rsmpeg::avutil::AVFrame, output_buffer: &mut [u8]) {
@@ -69,7 +63,7 @@ impl H264Decoder {
         let y_data = unsafe { std::slice::from_raw_parts_mut(data[0], height * linesize_y) };
         let cb_data = unsafe { std::slice::from_raw_parts_mut(data[1], height / 2 * linesize_cb) };
         let cr_data = unsafe { std::slice::from_raw_parts_mut(data[2], height / 2 * linesize_cr) };
-        self.decoded_yuv_to_rgb(y_data, cb_data, cr_data, output_buffer);
+        self.decoded_yuv_to_bgra(y_data, cb_data, cr_data, output_buffer);
     }
 
     fn parse_packets(&mut self, input_buffer: &[u8]) -> Option<DropReason> {

@@ -45,10 +45,29 @@ pub mod raster {
 
             let (b, g, r) = pixel::yuv_to_bgr(y, u, v);
 
-            bgra_pixels[i * 3] = b;
-            bgra_pixels[i * 3 + 1] = g;
-            bgra_pixels[i * 3 + 2] = r;
-            bgra_pixels[i * 3 + 3] = 255;
+            bgra_pixels[i * 4] = b;
+            bgra_pixels[i * 4 + 1] = g;
+            bgra_pixels[i * 4 + 2] = r;
+            bgra_pixels[i * 4 + 3] = 255;
+        }
+    }
+
+    pub fn yuv_to_bgra_separate(y_pixels: &[u8], u_pixels: &[u8], v_pixels: &[u8], bgra_pixels: &mut [u8]) {
+        let pixels_count = bgra_pixels.len() / 4;
+
+        for i in 0..pixels_count {
+            let (y, u, v) = (
+                y_pixels[i],
+                u_pixels[i / 4],
+                v_pixels[i / 4],
+            );
+
+            let (b, g, r) = pixel::yuv_to_bgr(y, u, v);
+
+            bgra_pixels[i * 4] = b;
+            bgra_pixels[i * 4 + 1] = g;
+            bgra_pixels[i * 4 + 2] = r;
+            bgra_pixels[i * 4 + 3] = 255;
         }
     }
 }

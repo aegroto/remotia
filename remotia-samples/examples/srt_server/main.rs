@@ -1,4 +1,6 @@
-use remotia::{server::{pipeline::ascode::{component::Component, AscodePipeline}, encode::identity::IdentityEncoder}};
+use remotia::server::{
+    pipeline::ascode::{component::Component, AscodePipeline},
+};
 use remotia_buffer_utils::BufferAllocator;
 use remotia_core_capturers::scrap::ScrapFrameCapturer;
 use remotia_ffmpeg_codecs::encoders::h264::H264Encoder;
@@ -26,8 +28,7 @@ async fn main() -> std::io::Result<()> {
 
     let encode_component = {
         let buffer_size = width * height * 4;
-        // let encoder = H264Encoder::new(buffer_size, width as i32, height as i32);
-        let encoder = IdentityEncoder::new();
+        let encoder = H264Encoder::new(buffer_size, width as i32, height as i32);
 
         Component::new()
             .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))

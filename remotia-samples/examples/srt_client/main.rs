@@ -1,4 +1,6 @@
-use remotia::{server::pipeline::ascode::{component::Component, AscodePipeline}, client::decode::identity::IdentityDecoder};
+use remotia::{
+    server::pipeline::ascode::{component::Component, AscodePipeline},
+};
 use remotia_buffer_utils::BufferAllocator;
 use remotia_core_renderers::beryllium::BerylliumRenderer;
 use remotia_ffmpeg_codecs::decoders::h264::H264Decoder;
@@ -23,8 +25,7 @@ async fn main() -> std::io::Result<()> {
 
     let decode_component = {
         let buffer_size = width * height * 4;
-        // let decoder = H264Decoder::new();
-        let decoder = IdentityDecoder::new();
+        let decoder = H264Decoder::new();
 
         Component::new()
             .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
@@ -34,8 +35,7 @@ async fn main() -> std::io::Result<()> {
     let render_component = {
         let renderer = BerylliumRenderer::new(width as u32, height as u32);
 
-        Component::new()
-            .add(renderer)
+        Component::new().add(renderer)
     };
 
     let pipeline = AscodePipeline::new()
