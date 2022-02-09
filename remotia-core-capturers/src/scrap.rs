@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use log::debug;
-use remotia::{traits::FrameProcessor, types::FrameData, server::{capture::FrameCapturer}, common::{feedback::FeedbackMessage, helpers::time::now_timestamp}};
+use remotia::{traits::FrameProcessor, types::FrameData, server::{capture::FrameCapturer}, common::{feedback::FeedbackMessage}};
 use scrap::{Capturer, Display};
 
 use core::slice;
@@ -42,8 +42,6 @@ impl ScrapFrameCapturer {
                     .get_writable_buffer_ref("raw_frame_buffer")
                     .unwrap()
                     .copy_from_slice(frame_slice);
-
-                frame_data.set("capture_timestamp", now_timestamp());
             }
             Err(error) => {
                 panic!("Scrap capture error: {}", error);

@@ -4,10 +4,14 @@ resolver = "2"
 members = [
     "remotia",
     "remotia-buffer-utils",
+    "remotia-profilation-utils",
+
     "remotia-samples",
+
     "remotia-core-capturers",
-    "remotia-ffmpeg-codecs",
-    "remotia-srt",
     "remotia-core-renderers",
     "remotia-core-loggers",
+
+    "remotia-ffmpeg-codecs",
+    "remotia-srt",
 ]
