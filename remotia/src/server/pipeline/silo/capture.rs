@@ -52,9 +52,9 @@ pub fn launch_capture_thread(
                 capture(&mut frame_capturer, &mut frame_data);
 
             frame_data.set("capture_timestamp", capture_timestamp);
-            frame_data.set_local("capture_time", capture_start_time.elapsed().as_millis());
-            frame_data.set_local("spin_time", spin_time);
-            frame_data.set_local("capturer_raw_frame_buffer_wait_time", raw_frame_buffer_wait_time);
+            frame_data.set("capture_time", capture_start_time.elapsed().as_millis());
+            frame_data.set("spin_time", spin_time);
+            frame_data.set("capturer_raw_frame_buffer_wait_time", raw_frame_buffer_wait_time);
 
             if let ControlFlow::Break(_) = push_result(
                 &capture_result_sender,

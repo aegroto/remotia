@@ -49,12 +49,12 @@ pub fn launch_encode_thread(
                     pull_buffer(&mut encoded_frame_buffers_receiver).await;
 
                 frame_data.insert_writable_buffer("encoded_frame_buffer", encoded_frame_buffer);
-                frame_data.set_local("encoder_capture_result_wait_time", capture_result_wait_time);
-                frame_data.set_local(
+                frame_data.set("encoder_capture_result_wait_time", capture_result_wait_time);
+                frame_data.set(
                     "encoder_encoded_frame_buffer_wait_time",
                     encoded_frame_buffer_wait_time,
                 );
-                frame_data.set_local("capture_delay", capture_delay);
+                frame_data.set("capture_delay", capture_delay);
 
                 encode(&mut encoder, &mut frame_data).await;
             } else {
@@ -97,7 +97,7 @@ async fn encode(encoder: &mut Box<dyn Encoder + Send>, frame_data: &mut FrameDat
     encoder.encode(frame_data).await;
     let encoding_time = encoding_start_time.elapsed().as_millis();
 
-    frame_data.set_local("encoding_time", encoding_time);
+    frame_data.set("encoding_time", encoding_time);
 }
 
 async fn pull_buffer(

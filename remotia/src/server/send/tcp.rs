@@ -45,7 +45,7 @@ impl FrameSender for TCPFrameSender {
 
         self.stream.write_all(&binarized_obj).unwrap();
 
-        frame_data.set_local("transmitted_bytes", binarized_obj.len() as u128);
+        frame_data.set("transmitted_bytes", binarized_obj.len() as u128);
     }
 
     fn handle_feedback(&mut self, message: FeedbackMessage) {

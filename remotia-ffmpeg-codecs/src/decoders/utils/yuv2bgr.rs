@@ -32,13 +32,32 @@ pub mod raster {
             bgr_pixels[i * 3 + 2] = r;
         }
     }
+
+    pub fn yuv_to_bgra(yuv_pixels: &[u8], bgra_pixels: &mut [u8]) {
+        let pixels_count = bgra_pixels.len() / 4;
+
+        for i in 0..pixels_count {
+            let (y, u, v) = (
+                yuv_pixels[i],
+                yuv_pixels[pixels_count + i / 4],
+                yuv_pixels[pixels_count + pixels_count / 4 + i / 4],
+            );
+
+            let (b, g, r) = pixel::yuv_to_bgr(y, u, v);
+
+            bgra_pixels[i * 3] = b;
+            bgra_pixels[i * 3 + 1] = g;
+            bgra_pixels[i * 3 + 2] = r;
+            bgra_pixels[i * 3 + 3] = 255;
+        }
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use log::debug;
 
-    use crate::client::decode::utils::yuv2bgr::raster;
+    use crate::decoders::utils::yuv2bgr::raster;
 
     #[test]
     fn yuv_to_bgr_simple_test() {

@@ -70,7 +70,7 @@ impl ConsoleServerStatsProfiler {
 #[async_trait]
 impl ServerProfiler for ConsoleServerStatsProfiler {
     fn log_frame(&mut self, frame_data: FrameData) {
-        if !self.log_errors && frame_data.get_error().is_some() {
+        if !self.log_errors && frame_data.get_drop_reason().is_some() {
             return;
         }
 
@@ -91,6 +91,6 @@ fn get_frame_stat(frame: &FrameData, key: &str) -> u128 {
     if frame.has(key) {
         frame.get(key)
     } else {
-        frame.get_local(key)
+        frame.get(key)
     }
 }

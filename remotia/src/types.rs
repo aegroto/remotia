@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fmt::Display};
 
 use bytes::{Bytes, BytesMut};
 use serde::Serialize;
@@ -11,9 +11,8 @@ pub struct FrameData {
     writable_buffers: HashMap<String, BytesMut>,
 
     stats: HashMap<String, u128>,
-    local_stats: HashMap<String, u128>,
 
-    error: Option<DropReason>,
+    drop_reason: Option<DropReason>,
 }
 
 impl FrameData {
@@ -27,18 +26,6 @@ impl FrameData {
 
     pub fn has(&self, key: &str) -> bool {
         self.stats.contains_key(key)
-    }
-
-    pub fn set_local(&mut self, key: &str, value: u128) {
-        self.local_stats.insert(key.to_string(), value);
-    }
-
-    pub fn get_local(&self, key: &str) -> u128 {
-        *self.local_stats.get(key).expect(&missing_key_msg(key))
-    }
-
-    pub fn has_local(&self, key: &str) -> bool {
-        self.local_stats.contains_key(key)
     }
 
     pub fn insert_readonly_buffer(&mut self, key: &str, buffer: Bytes) {
@@ -76,19 +63,18 @@ impl FrameData {
         self.writable_buffers.contains_key(key)
     }
 
-    pub fn set_error(&mut self, error: Option<DropReason>) {
-        self.error = error;
+    pub fn set_drop_reason(&mut self, error: Option<DropReason>) {
+        self.drop_reason = error;
     }
 
-    pub fn get_error(&self) -> Option<DropReason> {
-        self.error
+    pub fn get_drop_reason(&self) -> Option<DropReason> {
+        self.drop_reason
     }
 
     pub fn clone_without_buffers(&self) -> Self {
         Self {
             stats: self.stats.clone(),
-            local_stats: self.local_stats.clone(),
-            error: self.error.clone(),
+            drop_reason: self.drop_reason.clone(),
 
             ..Default::default()
         }
@@ -97,4 +83,15 @@ impl FrameData {
 
 fn missing_key_msg(key: &str) -> String {
     format!("Missing key '{}'", key)
+}
+
+impl Display for FrameData {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{{ Read-only buffers: {:?}, Writable buffers: {:?}, Stats: {:?}, Drop reason: {:?} }}",
+            self.readonly_buffers.keys(),
+            self.writable_buffers.keys(),
+            self.stats,
+            self.drop_reason
+        )
+    }
 }

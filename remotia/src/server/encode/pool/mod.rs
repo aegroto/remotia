@@ -139,7 +139,7 @@ impl Encoder for PoolEncoder {
 
             if let Err(TryRecvError::Empty) = pull_result {
                 debug!("No encoding results");
-                frame_data.set_error(Some(DropReason::NoEncodedFrames));
+                frame_data.set_drop_reason(Some(DropReason::NoEncodedFrames));
                 return;
             }
 
@@ -180,9 +180,9 @@ impl Encoder for PoolEncoder {
 
         // Insert frame stats
         let capture_timestamp = local_frame_data.get("capture_timestamp");
-        let capture_time = local_frame_data.get_local("capture_time");
+        let capture_time = local_frame_data.get("capture_time");
         frame_data.set("capture_timestamp", capture_timestamp);
-        frame_data.set_local("capture_time", capture_time);
+        frame_data.set("capture_time", capture_time);
 
         debug!(
             "Frame #{} size: {} encoder: #{}",

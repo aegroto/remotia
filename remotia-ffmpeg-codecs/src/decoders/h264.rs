@@ -1,5 +1,3 @@
-use std::slice;
-
 use log::debug;
 use rsmpeg::{
     avcodec::{AVCodec, AVCodecContext, AVCodecParserContext, AVPacket},
@@ -8,25 +6,27 @@ use rsmpeg::{
 
 use cstr::cstr;
 
-use crate::{error::DropReason, common::feedback::FeedbackMessage};
-use async_trait::async_trait;
+use remotia::{
+    common::feedback::FeedbackMessage, error::DropReason, traits::FrameProcessor, types::FrameData,
+};
 
 use super::{utils::yuv2bgr::raster, Decoder};
+use async_trait::async_trait;
 
-pub struct H265Decoder {
+pub struct H264Decoder {
     decode_context: AVCodecContext,
 
     parser_context: AVCodecParserContext,
 }
 
 // TODO: Fix all those unsafe impl
-unsafe impl Send for H265Decoder {}
+unsafe impl Send for H264Decoder {}
 
-impl H265Decoder {
+impl H264Decoder {
     pub fn new() -> Self {
-        let decoder = AVCodec::find_decoder_by_name(cstr!("hevc")).unwrap();
+        let decoder = AVCodec::find_decoder_by_name(cstr!("h264")).unwrap();
 
-        H265Decoder {
+        H264Decoder {
             decode_context: {
                 let mut decode_context = AVCodecContext::new(&decoder);
                 decode_context.open(None).unwrap();
@@ -51,7 +51,12 @@ impl H265Decoder {
         yuv420p_frame_buffer.extend_from_slice(u_frame_buffer);
         yuv420p_frame_buffer.extend_from_slice(v_frame_buffer);
 
-        raster::yuv_to_bgr(&yuv420p_frame_buffer, output_buffer);
+        debug!("y_frame_buffer len: {}", y_frame_buffer.len());
+        debug!("u_frame_buffer len: {}", u_frame_buffer.len());
+        debug!("v_frame_buffer len: {}", v_frame_buffer.len());
+        debug!("yuv420p_frame_buffer len: {}", yuv420p_frame_buffer.len());
+
+        raster::yuv_to_bgra(&yuv420p_frame_buffer, output_buffer);
     }
 
     fn write_avframe(&mut self, avframe: rsmpeg::avutil::AVFrame, output_buffer: &mut [u8]) {
@@ -99,15 +104,12 @@ impl H265Decoder {
 
         None
     }
-}
 
-#[async_trait]
-impl Decoder for H265Decoder {
-    async fn decode(
+    fn decode_to_buffer(
         &mut self,
         input_buffer: &[u8],
         output_buffer: &mut [u8],
-    ) -> Result<usize, DropReason> {
+    ) -> Result<(), DropReason> {
         if let Some(error) = self.parse_packets(input_buffer) {
             return Err(error);
         }
@@ -122,11 +124,54 @@ impl Decoder for H265Decoder {
 
         self.write_avframe(avframe, output_buffer);
 
-        Ok(output_buffer.len())
+        Ok(())
+    }
+}
+
+#[async_trait]
+impl FrameProcessor for H264Decoder {
+    async fn process(&mut self, mut frame_data: FrameData) -> FrameData {
+        let mut encoded_frame_buffer = frame_data
+            .extract_writable_buffer("encoded_frame_buffer")
+            .unwrap();
+
+        let empty_buffer_memory =
+            encoded_frame_buffer.split_off(frame_data.get("encoded_size") as usize);
+
+        let mut raw_frame_buffer = frame_data
+            .extract_writable_buffer("raw_frame_buffer")
+            .unwrap();
+
+        let decode_result = self.decode_to_buffer(&encoded_frame_buffer, &mut raw_frame_buffer);
+
+        encoded_frame_buffer.unsplit(empty_buffer_memory);
+
+        frame_data.insert_writable_buffer("encoded_frame_buffer", encoded_frame_buffer);
+        frame_data.insert_writable_buffer("raw_frame_buffer", raw_frame_buffer);
+
+        if let Err(drop_reason) = decode_result {
+            frame_data.set_drop_reason(Some(drop_reason));
+        }
+
+        frame_data
+    }
+}
+
+// retro-compatibility with silo pipeline
+#[async_trait]
+impl Decoder for H264Decoder {
+    async fn decode(
+        &mut self,
+        input_buffer: &[u8],
+        output_buffer: &mut [u8],
+    ) -> Result<usize, DropReason> {
+        match self.decode_to_buffer(input_buffer, output_buffer) {
+            Ok(_) => Ok(output_buffer.len()),
+            Err(drop_reason) => Err(drop_reason),
+        }
     }
 
     fn handle_feedback(&mut self, message: FeedbackMessage) {
         debug!("Feedback message: {:?}", message);
     }
 }
-

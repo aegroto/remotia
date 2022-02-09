@@ -46,9 +46,9 @@ impl ConsoleDropReasonsProfiler {
             let count = self
                 .logged_frames
                 .iter()
-                .filter(|frame| frame.get_error().is_some())
+                .filter(|frame| frame.get_drop_reason().is_some())
                 .filter(|frame| {
-                    std::mem::discriminant(&frame.get_error().unwrap())
+                    std::mem::discriminant(&frame.get_drop_reason().unwrap())
                         == std::mem::discriminant(&error_type)
                 })
                 .count();

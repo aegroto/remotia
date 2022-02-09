@@ -37,11 +37,11 @@ pub fn launch_transfer_thread(
 
             let mut frame_data = encode_result.frame_data;
 
-            if frame_data.get_error().is_none() {
+            if frame_data.get_drop_reason().is_none() {
                 transfer(&mut frame_sender, &mut frame_data).await;
 
-                frame_data.set_local("transferrer_encode_result_wait_time", encode_result_wait_time);
-                frame_data.set_local(
+                frame_data.set("transferrer_encode_result_wait_time", encode_result_wait_time);
+                frame_data.set(
                     "total_time",
                     SystemTime::now()
                         .duration_since(UNIX_EPOCH)
@@ -50,7 +50,7 @@ pub fn launch_transfer_thread(
                         - frame_data.get("capture_timestamp"),
                 );
             } else {
-                debug!("Error on encoded frame: {:?}", frame_data.get_error());
+                debug!("Error on encoded frame: {:?}", frame_data.get_drop_reason());
             }
 
             return_writable_buffer(
@@ -76,7 +76,7 @@ async fn transfer(
     let transfer_start_time = Instant::now();
     frame_sender.send_frame(frame_data).await;
 
-    frame_data.set_local("transfer_time", transfer_start_time.elapsed().as_millis());
+    frame_data.set("transfer_time", transfer_start_time.elapsed().as_millis());
 }
 
 async fn pull_encode_result(

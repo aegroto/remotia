@@ -141,7 +141,7 @@ impl FrameSender for RemVSPFrameSender {
             .iter()
             .for_each(|frame_fragment| transmitted_bytes += self.send_fragment(&frame_fragment));
 
-        frame_data.set_local("transmitted_bytes", transmitted_bytes as u128);
+        frame_data.set("transmitted_bytes", transmitted_bytes as u128);
     }
 
     fn handle_feedback(&mut self, message: FeedbackMessage) {

@@ -13,7 +13,7 @@ use remotia::{
 };
 
 use futures::TryStreamExt;
-use log::{debug, info};
+use log::{debug, info, warn};
 use srt_tokio::{SrtSocket};
 
 use remotia::error::DropReason;
@@ -97,11 +97,14 @@ impl FrameProcessor for SRTFrameReceiver {
 
         match self.receive_frame_pixels(frame_buffer).await {
             Ok(received_frame) => {
-                frame_data.set_local("encoded_size", received_frame.buffer_size as u128);
-                frame_data.set_local("capture_timestamp", received_frame.capture_timestamp);
-                frame_data.set_local("reception_delay", received_frame.reception_delay);
+                frame_data.set("encoded_size", received_frame.buffer_size as u128);
+                frame_data.set("capture_timestamp", received_frame.capture_timestamp);
+                frame_data.set("reception_delay", received_frame.reception_delay);
             }
-            Err(error) => frame_data.set_error(Some(error)),
+            Err(error) => {
+                warn!("Error during frame reception: {}", error);
+                frame_data.set_drop_reason(Some(error))
+            },
         };
 
         frame_data

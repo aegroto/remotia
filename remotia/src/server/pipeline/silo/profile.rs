@@ -28,7 +28,7 @@ pub fn launch_profile_thread(
                 pull_transfer_result(&mut transfer_result_receiver).await;
 
             let mut frame_data = transfer_result.frame_data;
-            frame_data.set_local("total_time", total_time);
+            frame_data.set("total_time", total_time);
 
             let profilers_count = profilers.len();
             for i in 0..profilers_count {
