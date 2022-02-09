@@ -10,8 +10,8 @@ use remotia_srt::receiver::SRTFrameReceiver;
 async fn main() -> std::io::Result<()> {
     env_logger::init();
 
-    let width = 1920;
-    let height = 1080;
+    let width = 1280;
+    let height = 720;
 
     // Pipeline structure
     let receive_component = {

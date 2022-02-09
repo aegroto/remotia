@@ -1,4 +1,4 @@
-use std::time::Instant;
+use std::time::{Instant, Duration};
 
 use async_trait::async_trait;
 
@@ -22,13 +22,14 @@ pub struct SRTFrameSender {
 }
 
 impl SRTFrameSender {
-    pub async fn new(port: u16) -> Self {
+    pub async fn new(port: u16, latency: Duration) -> Self {
         info!("Listening...");
         let socket = SrtSocket::builder()
             .set(|options| {
-                options.sender.buffer_size = ByteCount(1024 * 1024 * 128); // 32 MB for internal buffering
-                options.sender.max_payload_size = PacketSize(1024 * 1024 * 128);
+                options.sender.buffer_size = ByteCount(1024 * 1024 * 32); // 32 MB for internal buffering
+                options.sender.max_payload_size = PacketSize(1024 * 1024 * 32);
             })
+            .latency(latency)
             .listen_on(port)
             .await
             .unwrap();

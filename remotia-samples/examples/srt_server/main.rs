@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use remotia::server::{
     pipeline::ascode::{component::Component, AscodePipeline},
 };
@@ -19,7 +21,7 @@ async fn main() -> std::io::Result<()> {
         let buffer_size = width * height * 4;
 
         let component = Component::new()
-            .with_tick(1000)
+            .with_tick(33)
             .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
             .add(capturer);
 
@@ -36,7 +38,7 @@ async fn main() -> std::io::Result<()> {
     };
 
     let transmission_component = {
-        let sender = SRTFrameSender::new(5001).await;
+        let sender = SRTFrameSender::new(5001, Duration::from_millis(50)).await;
 
         Component::new().add(sender)
     };
