@@ -14,8 +14,8 @@ impl TimestampAdder {
 
 #[async_trait]
 impl FrameProcessor for TimestampAdder {
-    async fn process(&mut self, mut frame_data: FrameData) -> FrameData {
+    async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
         frame_data.set(&self.id, now_timestamp());
-        frame_data
+        Some(frame_data)
     }
 }

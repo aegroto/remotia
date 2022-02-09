@@ -90,7 +90,7 @@ impl SRTFrameReceiver {
 
 #[async_trait]
 impl FrameProcessor for SRTFrameReceiver {
-    async fn process(&mut self, mut frame_data: FrameData) -> FrameData {
+    async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
         let frame_buffer = frame_data
             .get_writable_buffer_ref("encoded_frame_buffer")
             .unwrap();
@@ -107,7 +107,7 @@ impl FrameProcessor for SRTFrameReceiver {
             },
         };
 
-        frame_data
+        Some(frame_data)
     }
 }
 

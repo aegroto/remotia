@@ -16,7 +16,7 @@ async fn main() -> std::io::Result<()> {
 
     // Pipeline structure
     let pipeline = AscodePipeline::new()
-        .add(
+        .link(
             Component::new()
                 .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("reception_start_timestamp"))
@@ -26,7 +26,7 @@ async fn main() -> std::io::Result<()> {
                     "reception_time",
                 )),
         )
-        .add(
+        .link(
             Component::new()
                 .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("decoding_start_timestamp"))
@@ -36,7 +36,7 @@ async fn main() -> std::io::Result<()> {
                     "decoding_time",
                 )),
         )
-        .add(
+        .link(
             Component::new()
                 .add(TimestampAdder::new("rendering_start_timestamp"))
                 .add(BerylliumRenderer::new(width as u32, height as u32))
@@ -45,7 +45,7 @@ async fn main() -> std::io::Result<()> {
                     "rendering_time",
                 )),
         )
-        .add(Component::new().add(ConsoleServerStatsProfiler {
+        .link(Component::new().add(ConsoleServerStatsProfiler {
             values_to_log: vec![
                 "reception_time".to_string(),
                 "decoding_time".to_string(),

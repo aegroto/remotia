@@ -52,21 +52,25 @@ impl Component {
                 }
 
                 let mut frame_data = if self.receiver.is_some() {
-                    self.receiver.as_mut().unwrap().recv().await.expect("Receive channel closed")
+                    Some(self.receiver.as_mut().unwrap().recv().await.expect("Receive channel closed"))
                 } else {
                     debug!("No receiver registered, allocating an empty frame DTO");
-                    FrameData::default()
+                    Some(FrameData::default())
                 };
 
-                debug!("Received frame data: {}", frame_data);
+                debug!("Received frame data: {}", frame_data.as_ref().unwrap());
 
                 for processor in &mut self.processors {
-                    frame_data = processor.process(frame_data).await;
+                    frame_data = processor.process(frame_data.unwrap()).await;
+
+                    if frame_data.is_none() {
+                        break;
+                    }
                 }
 
-                if self.sender.is_some() {
-                    debug!("Sending frame data: {}", frame_data);
-                    if let Err(_) = self.sender.as_mut().unwrap().send(frame_data) {
+                if frame_data.is_some() && self.sender.is_some() {
+                    debug!("Sending frame data: {}", frame_data.as_ref().unwrap());
+                    if let Err(_) = self.sender.as_mut().unwrap().send(frame_data.unwrap()) {
                         panic!("Error while sending frame data");
                     }
                 }

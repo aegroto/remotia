@@ -82,9 +82,9 @@ impl ConsoleServerStatsProfiler {
 
 #[async_trait]
 impl FrameProcessor for ConsoleServerStatsProfiler {
-    async fn process(&mut self, frame_data: FrameData) -> FrameData {
+    async fn process(&mut self, frame_data: FrameData) -> Option<FrameData> {
         self.log_frame_data(&frame_data);
-        frame_data
+        Some(frame_data)
     }
 }
 

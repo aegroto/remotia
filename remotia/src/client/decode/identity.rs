@@ -18,7 +18,7 @@ impl IdentityDecoder {
 
 #[async_trait]
 impl FrameProcessor for IdentityDecoder {
-    async fn process(&mut self, mut frame_data: FrameData) -> FrameData {
+    async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
         let input_buffer = frame_data
             .extract_writable_buffer("encoded_frame_buffer")
             .unwrap();
@@ -31,7 +31,7 @@ impl FrameProcessor for IdentityDecoder {
         frame_data.insert_writable_buffer("encoded_frame_buffer", input_buffer);
         frame_data.insert_writable_buffer("raw_frame_buffer", output_buffer);
 
-        frame_data
+        Some(frame_data)
     }
 }
 

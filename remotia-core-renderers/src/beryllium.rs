@@ -43,12 +43,12 @@ impl BerylliumRenderer {
 
 #[async_trait]
 impl FrameProcessor for BerylliumRenderer {
-    async fn process(&mut self, mut frame_data: FrameData) -> FrameData {
+    async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
         let raw_frame_buffer = frame_data.get_writable_buffer_ref("raw_frame_buffer").unwrap();
         packed_bgra_to_packed_rgba(&raw_frame_buffer, self.pixels.get_frame());
         self.pixels.render().unwrap();
 
-        frame_data
+        Some(frame_data)
     }
 }
 

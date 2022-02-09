@@ -52,9 +52,9 @@ impl ScrapFrameCapturer {
 
 #[async_trait]
 impl FrameProcessor for ScrapFrameCapturer {
-    async fn process(&mut self, mut frame_data: FrameData) -> FrameData {
+    async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
         self.capture_on_frame_data(&mut frame_data);
-        frame_data
+        Some(frame_data)
     }
 }
 

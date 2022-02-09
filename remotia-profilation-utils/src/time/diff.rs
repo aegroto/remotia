@@ -18,9 +18,9 @@ impl TimestampDiffCalculator {
 
 #[async_trait]
 impl FrameProcessor for TimestampDiffCalculator {
-    async fn process(&mut self, mut frame_data: FrameData) -> FrameData {
+    async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
         let source_timestamp = frame_data.get(&self.source_id);
         frame_data.set(&self.diff_id, now_timestamp() - source_timestamp);
-        frame_data
+        Some(frame_data)
     }
 }

@@ -69,9 +69,9 @@ impl SRTFrameSender {
 
 #[async_trait]
 impl FrameProcessor for SRTFrameSender {
-    async fn process(&mut self, mut frame_data: FrameData) -> FrameData {
+    async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
         self.send_frame_data(&mut frame_data).await;
-        frame_data
+        Some(frame_data)
     }
 }
 

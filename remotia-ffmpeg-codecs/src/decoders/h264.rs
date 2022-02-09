@@ -124,7 +124,7 @@ impl H264Decoder {
 
 #[async_trait]
 impl FrameProcessor for H264Decoder {
-    async fn process(&mut self, mut frame_data: FrameData) -> FrameData {
+    async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
         let mut encoded_frame_buffer = frame_data
             .extract_writable_buffer("encoded_frame_buffer")
             .unwrap();
@@ -147,7 +147,7 @@ impl FrameProcessor for H264Decoder {
             frame_data.set_drop_reason(Some(drop_reason));
         }
 
-        frame_data
+        Some(frame_data)
     }
 }
 

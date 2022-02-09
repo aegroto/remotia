@@ -19,14 +19,14 @@ async fn main() -> std::io::Result<()> {
     let buffer_size = width * height * 4;
 
     let pipeline = AscodePipeline::new()
-        .add(
+        .link(
             Component::new()
                 .with_tick(33)
                 .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("capture_timestamp"))
                 .add(capturer),
         )
-        .add(
+        .link(
             Component::new()
                 .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("encoding_start_timestamp"))
@@ -36,7 +36,7 @@ async fn main() -> std::io::Result<()> {
                     "encoding_time",
                 )),
         )
-        .add(
+        .link(
             Component::new()
                 .add(TimestampAdder::new("transmission_start_timestamp"))
                 .add(SRTFrameSender::new(5001, Duration::from_millis(50)).await)
@@ -45,7 +45,7 @@ async fn main() -> std::io::Result<()> {
                     "transmission_time",
                 )),
         )
-        .add(Component::new().add(ConsoleServerStatsProfiler {
+        .link(Component::new().add(ConsoleServerStatsProfiler {
             values_to_log: vec![
                 "encoded_size".to_string(),
                 "encoding_time".to_string(),

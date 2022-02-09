@@ -160,9 +160,9 @@ fn init_encoder(width: i32, height: i32, crf: u32) -> AVCodecContext {
 
 #[async_trait]
 impl FrameProcessor for H264Encoder {
-    async fn process(&mut self, mut frame_data: FrameData) -> FrameData {
+    async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
         self.encode_on_frame_data(&mut frame_data);
-        frame_data
+        Some(frame_data)
     }
 }
 

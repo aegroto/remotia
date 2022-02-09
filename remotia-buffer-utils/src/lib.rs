@@ -25,9 +25,9 @@ impl BufferAllocator {
 
 #[async_trait]
 impl FrameProcessor for BufferAllocator {
-    async fn process(&mut self, mut frame_data: FrameData) -> FrameData {
+    async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
         frame_data.insert_writable_buffer(&self.buffer_id, self.allocate_buffer());
-        frame_data
+        Some(frame_data)
     }
 
 }
