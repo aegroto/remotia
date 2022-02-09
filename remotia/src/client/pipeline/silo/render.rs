@@ -5,7 +5,6 @@ use std::{
 
 use bytes::BytesMut;
 use log::{debug, info, warn};
-use pixels::Pixels;
 use tokio::{
     sync::{
         broadcast,

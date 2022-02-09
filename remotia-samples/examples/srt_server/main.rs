@@ -8,9 +8,6 @@ use remotia_srt::sender::SRTFrameSender;
 async fn main() -> std::io::Result<()> {
     env_logger::init();
 
-    // let opt: Result<FrameData, ()> = Ok(FrameData::default());
-    // opt.unwrap_err();
-
     // Pipeline structure
 
     let (width, height, capture_component) = initialize_capture_component();

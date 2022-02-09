@@ -1,5 +1,3 @@
-pub mod beryllium;
-
 use crate::common::feedback::FeedbackMessage;
 
 pub trait Renderer {

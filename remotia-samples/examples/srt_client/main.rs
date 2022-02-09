@@ -1,5 +1,6 @@
 use remotia::server::pipeline::ascode::{component::Component, AscodePipeline};
 use remotia_buffer_utils::BufferAllocator;
+use remotia_core_renderers::beryllium::BerylliumRenderer;
 use remotia_ffmpeg_codecs::decoders::h264::H264Decoder;
 use remotia_srt::receiver::SRTFrameReceiver;
 
@@ -13,10 +14,12 @@ async fn main() -> std::io::Result<()> {
     // Pipeline structure
     let receive_component = initialize_receive_component(width * height * 4).await;
     let decode_component = initialize_decode_component(width * height * 4);
+    let render_component = initialize_render_component(width, height);
 
     let pipeline = AscodePipeline::new()
         .add(receive_component)
-        .add(decode_component);
+        .add(decode_component)
+        .add(render_component);
 
     pipeline.run().await;
 
@@ -37,4 +40,11 @@ fn initialize_decode_component(buffer_size: usize) -> Component {
     Component::new()
         .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
         .add(decoder)
+}
+
+fn initialize_render_component(width: usize, height: usize) -> Component {
+    let renderer = BerylliumRenderer::new(width as u32, height as u32);
+
+    Component::new()
+        .add(renderer)
 }

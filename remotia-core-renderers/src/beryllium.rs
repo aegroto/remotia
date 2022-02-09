@@ -1,15 +1,14 @@
 use beryllium::{
-    event::Event,
     gl_window::{GlAttr, GlContextFlags, GlProfile, GlWindow},
     init::{InitFlags, Sdl},
     window::WindowFlags,
-    SdlResult,
 };
 use log::debug;
 use pixels::{Pixels, PixelsBuilder, SurfaceTexture};
+use remotia::{client::render::Renderer, traits::FrameProcessor, types::FrameData, common::feedback::FeedbackMessage};
 use zstring::zstr;
 
-use super::Renderer;
+use async_trait::async_trait;
 
 pub struct BerylliumRenderer {
     _gl_win: GlWindow,
@@ -42,13 +41,25 @@ impl BerylliumRenderer {
     }
 }
 
+#[async_trait]
+impl FrameProcessor for BerylliumRenderer {
+    async fn process(&mut self, mut frame_data: FrameData) -> FrameData {
+        let raw_frame_buffer = frame_data.get_writable_buffer_ref("raw_frame_buffer").unwrap();
+        self.pixels.get_frame().copy_from_slice(raw_frame_buffer);
+        self.pixels.render().unwrap();
+
+        frame_data
+    }
+}
+
+// retro-compatibility with silo pipeline
 impl Renderer for BerylliumRenderer {
     fn render(&mut self, raw_frame_buffer: &[u8]) {
         packed_bgr_to_packed_rgba(&raw_frame_buffer, self.pixels.get_frame());
         self.pixels.render().unwrap();
     }
 
-    fn handle_feedback(&mut self, message: crate::common::feedback::FeedbackMessage) {
+    fn handle_feedback(&mut self, message: FeedbackMessage) {
         debug!("Feedback message: {:?}", message);
     }
 

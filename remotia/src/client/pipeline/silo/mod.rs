@@ -15,19 +15,13 @@ use std::time::Instant;
 use std::time::SystemTime;
 use std::time::UNIX_EPOCH;
 
-use beryllium::*;
-
 use bytes::BytesMut;
 use chrono::Utc;
 use clap::Parser;
 use log::info;
 use log::{debug, error, warn};
-use pixels::wgpu;
-use pixels::PixelsBuilder;
-use pixels::{wgpu::Surface, Pixels, SurfaceTexture};
 use tokio::sync::broadcast;
 use tokio::sync::mpsc;
-use zstring::zstr;
 
 use crate::client::decode::Decoder;
 use crate::error::DropReason;

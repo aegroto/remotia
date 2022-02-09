@@ -17,3 +17,4 @@ remotia-buffer-utils = { path = "../remotia-buffer-utils/" }
 remotia-core-capturers = { path = "../remotia-core-capturers/" }   
 remotia-ffmpeg-codecs = { path = "../remotia-ffmpeg-codecs/" }   
 remotia-srt = { path = "../remotia-srt/" }   
+remotia-core-renderers = { path = "../remotia-core-renderers/" }   
