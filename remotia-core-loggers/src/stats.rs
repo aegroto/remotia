@@ -1,9 +1,9 @@
 use std::time::{Duration, Instant};
 
-use crate::{
+use remotia::{
     common::feedback::FeedbackMessage,
     server::{profiling::ServerProfiler},
-    types::FrameData,
+    types::FrameData, traits::FrameProcessor,
 };
 
 use async_trait::async_trait;
@@ -65,21 +65,34 @@ impl ConsoleServerStatsProfiler {
         self.logged_frames.clear();
         self.current_round_start = Instant::now();
     }
-}
 
-#[async_trait]
-impl ServerProfiler for ConsoleServerStatsProfiler {
-    fn log_frame(&mut self, frame_data: FrameData) {
+    fn log_frame_data(&mut self, frame_data: &FrameData) {
         if !self.log_errors && frame_data.get_drop_reason().is_some() {
             return;
         }
 
-        self.logged_frames.push(frame_data);
+        self.logged_frames.push(frame_data.clone_without_buffers());
 
         if self.current_round_start.elapsed().gt(&self.round_duration) {
             self.print_round_stats();
             self.reset_round();
         }
+    }
+}
+
+#[async_trait]
+impl FrameProcessor for ConsoleServerStatsProfiler {
+    async fn process(&mut self, frame_data: FrameData) -> FrameData {
+        self.log_frame_data(&frame_data);
+        frame_data
+    }
+}
+
+// retro-compatibility for silo pipeline
+#[async_trait]
+impl ServerProfiler for ConsoleServerStatsProfiler {
+    fn log_frame(&mut self, frame_data: FrameData) {
+        self.log_frame_data(&frame_data);
     }
 
     async fn pull_feedback(&mut self) -> Option<FeedbackMessage> {

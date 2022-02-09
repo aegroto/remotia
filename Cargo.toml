@@ -9,4 +9,5 @@ members = [
     "remotia-ffmpeg-codecs",
     "remotia-srt",
     "remotia-core-renderers",
+    "remotia-core-loggers",
 ]
