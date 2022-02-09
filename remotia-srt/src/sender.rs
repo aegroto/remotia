@@ -26,8 +26,8 @@ impl SRTFrameSender {
         info!("Listening...");
         let socket = SrtSocket::builder()
             .set(|options| {
-                options.sender.buffer_size = ByteCount(1024 * 1024 * 32); // 32 MB for internal buffering
-                options.sender.max_payload_size = PacketSize(1024 * 1024 * 32);
+                options.sender.buffer_size = ByteCount(1024 * 1024 * 128); // 32 MB for internal buffering
+                options.sender.max_payload_size = PacketSize(1024 * 1024 * 128);
             })
             .listen_on(port)
             .await

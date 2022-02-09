@@ -7,7 +7,7 @@ use crate::types::FrameData;
 
 use async_trait::async_trait;
 
-// pub mod identity;
+pub mod identity;
 pub mod pool;
 
 #[async_trait]

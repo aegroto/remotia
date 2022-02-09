@@ -1,4 +1,4 @@
-use remotia::server::pipeline::ascode::{component::Component, AscodePipeline};
+use remotia::{server::pipeline::ascode::{component::Component, AscodePipeline}, client::decode::identity::IdentityDecoder};
 use remotia_buffer_utils::BufferAllocator;
 use remotia_core_renderers::beryllium::BerylliumRenderer;
 use remotia_ffmpeg_codecs::decoders::h264::H264Decoder;
@@ -12,9 +12,31 @@ async fn main() -> std::io::Result<()> {
     let height = 1080;
 
     // Pipeline structure
-    let receive_component = initialize_receive_component(width * height * 4).await;
-    let decode_component = initialize_decode_component(width * height * 4);
-    let render_component = initialize_render_component(width, height);
+    let receive_component = {
+        let buffer_size = width * height * 4;
+        let receiver = SRTFrameReceiver::new("127.0.0.1:5001").await;
+
+        Component::new()
+            .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
+            .add(receiver)
+    };
+
+    let decode_component = {
+        let buffer_size = width * height * 4;
+        // let decoder = H264Decoder::new();
+        let decoder = IdentityDecoder::new();
+
+        Component::new()
+            .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
+            .add(decoder)
+    };
+
+    let render_component = {
+        let renderer = BerylliumRenderer::new(width as u32, height as u32);
+
+        Component::new()
+            .add(renderer)
+    };
 
     let pipeline = AscodePipeline::new()
         .add(receive_component)
@@ -24,27 +46,4 @@ async fn main() -> std::io::Result<()> {
     pipeline.run().await;
 
     Ok(())
-}
-
-async fn initialize_receive_component(buffer_size: usize) -> Component {
-    let receiver = SRTFrameReceiver::new("127.0.0.1:5001").await;
-
-    Component::new()
-        .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
-        .add(receiver)
-}
-
-fn initialize_decode_component(buffer_size: usize) -> Component {
-    let decoder = H264Decoder::new();
-
-    Component::new()
-        .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
-        .add(decoder)
-}
-
-fn initialize_render_component(width: usize, height: usize) -> Component {
-    let renderer = BerylliumRenderer::new(width as u32, height as u32);
-
-    Component::new()
-        .add(renderer)
 }
