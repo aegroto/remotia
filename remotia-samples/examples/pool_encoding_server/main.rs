@@ -61,7 +61,7 @@ async fn main() -> std::io::Result<()> {
         .tag("Capturing")
         .link(
             Component::new()
-                .add(Ticker::new(10))
+                .add(Ticker::new(50))
                 .add(TimestampAdder::new("process_start_timestamp"))
                 .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("capture_timestamp"))

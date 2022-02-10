@@ -3,7 +3,7 @@ use std::time::Duration;
 use remotia::{
     error::DropReason,
     processors::{
-        error_switch::OnErrorSwitch, frame_drop::{threshold::ThresholdBasedFrameDropper, timestamp::TimestampBasedFrameDropper}, switch::Switch, pool_switch::DepoolingSwitch,
+        error_switch::OnErrorSwitch, frame_drop::{threshold::ThresholdBasedFrameDropper, timestamp::TimestampBasedFrameDropper}, switch::Switch, pool_switch::DepoolingSwitch, frame_reorder::TimestampBasedFrameReorderingBuffer,
     },
     server::pipeline::ascode::{component::Component, AscodePipeline},
 };
@@ -80,7 +80,8 @@ fn build_tail_pipeline(
         .tag("RenderingAndProfilation")
         .link(
             Component::new()
-                .add(TimestampBasedFrameDropper::new("capture_timestamp"))
+                // .add(TimestampBasedFrameDropper::new("capture_timestamp"))
+                .add(TimestampBasedFrameReorderingBuffer::new("capture_timestamp", 20))
                 .add(OnErrorSwitch::new(error_handling_pipeline))
                 .add(TimestampDiffCalculator::new(
                     "capture_timestamp",
