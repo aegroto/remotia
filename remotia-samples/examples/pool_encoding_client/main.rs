@@ -3,12 +3,21 @@ use std::time::Duration;
 use remotia::{
     error::DropReason,
     processors::{
-        error_switch::OnErrorSwitch, frame_drop::{threshold::ThresholdBasedFrameDropper, timestamp::TimestampBasedFrameDropper}, switch::Switch, pool_switch::DepoolingSwitch, frame_reorder::TimestampBasedFrameReorderingBuffer,
+        error_switch::OnErrorSwitch,
+        frame_drop::{
+            threshold::ThresholdBasedFrameDropper, timestamp::TimestampBasedFrameDropper,
+        },
+        frame_reorder::TimestampBasedFrameReorderingBuffer,
+        pool_switch::DepoolingSwitch,
+        switch::Switch,
     },
     server::pipeline::ascode::{component::Component, AscodePipeline},
 };
 use remotia_buffer_utils::BufferAllocator;
-use remotia_core_loggers::{errors::ConsoleDropReasonLogger, stats::ConsoleAverageStatsLogger};
+use remotia_core_loggers::{
+    errors::ConsoleDropReasonLogger, printer::ConsoleFrameDataPrinter,
+    stats::ConsoleAverageStatsLogger,
+};
 use remotia_core_renderers::beryllium::BerylliumRenderer;
 use remotia_ffmpeg_codecs::decoders::h264::H264Decoder;
 use remotia_profilation_utils::time::{add::TimestampAdder, diff::TimestampDiffCalculator};
@@ -30,9 +39,7 @@ async fn main() -> std::io::Result<()> {
     let mut decoding_switch = DepoolingSwitch::new();
 
     let decoding_pipelines: Vec<AscodePipeline> = (0..decoders_count)
-        .map(|_| {
-            build_decoding_pipeline(buffer_size, &error_handling_pipeline, &tail_pipeline)
-        })
+        .map(|_| build_decoding_pipeline(buffer_size, &error_handling_pipeline, &tail_pipeline))
         .collect();
 
     for key in 0..decoders_count {
@@ -80,8 +87,11 @@ fn build_tail_pipeline(
         .tag("RenderingAndProfilation")
         .link(
             Component::new()
-                // .add(TimestampBasedFrameDropper::new("capture_timestamp"))
-                .add(TimestampBasedFrameReorderingBuffer::new("capture_timestamp", 20))
+                .add(TimestampBasedFrameDropper::new("capture_timestamp"))
+                /*.add(TimestampBasedFrameReorderingBuffer::new(
+                    "capture_timestamp",
+                    20,
+                ))*/
                 .add(OnErrorSwitch::new(error_handling_pipeline))
                 .add(TimestampDiffCalculator::new(
                     "capture_timestamp",
@@ -153,12 +163,14 @@ fn build_errors_handling_pipeline() -> AscodePipeline {
     AscodePipeline::new()
         .tag("ErrorsHandler")
         .link(
-            Component::new().add(
-                ConsoleDropReasonLogger::new()
-                    .log(DropReason::StaleFrame)
-                    .log(DropReason::ConnectionError)
-                    .log(DropReason::CodecError),
-            ),
+            Component::new()
+                .add(
+                    ConsoleDropReasonLogger::new()
+                        .log(DropReason::StaleFrame)
+                        .log(DropReason::ConnectionError)
+                        .log(DropReason::CodecError),
+                )
+                .add(ConsoleFrameDataPrinter::new()),
         )
         .bind()
         .feedable()
