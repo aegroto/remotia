@@ -1,5 +1,5 @@
 use log::info;
-use tokio::sync::mpsc::{self, UnboundedSender};
+use tokio::{sync::mpsc::{self, UnboundedSender}, task::JoinHandle};
 
 use crate::types::FrameData;
 
@@ -12,6 +12,8 @@ pub struct AscodePipeline {
     components: Vec<Component>,
     feeding_sender: Option<UnboundedSender<FrameData>>,
 
+    tag: String,
+
     bound: bool
 }
 
@@ -20,6 +22,8 @@ impl AscodePipeline {
         Self {
             components: Vec::new(),
             feeding_sender: None,
+
+            tag: "".to_string(),
 
             bound: false
         }
@@ -35,24 +39,29 @@ impl AscodePipeline {
         AscodePipelineFeeder::new(sender)
     }
 
-    pub async fn run(self) {
-        info!("Launching threads...");
+    pub fn run(self) -> JoinHandle<()> {
+        info!("[{}] Launching threads...", self.tag);
         if !self.bound {
-            panic!("Called 'run' before binding the pipeline");
+            panic!("[{}] Called 'run' before binding the pipeline", self.tag);
         }
 
-        let mut handles = Vec::new();
-        for component in self.components {
-            let handle = component.launch();
-            handles.push(handle);
-        }
-        for handle in handles {
-            handle.await.unwrap();
-        }
+        tokio::spawn(async move {
+            let mut handles = Vec::new();
+
+            for component in self.components {
+                let handle = component.launch();
+                handles.push(handle);
+            }
+
+            for handle in handles {
+                handle.await.unwrap();
+            }
+        })
     }
 
     pub fn bind(mut self) -> Self {
-        info!("Binding channels...");
+        info!("[{}] Binding channels...", self.tag);
+
         for i in 0..self.components.len()-1 {
             let (sender, receiver) = mpsc::unbounded_channel::<FrameData>();
 
@@ -76,6 +85,11 @@ impl AscodePipeline {
 
         head.set_receiver(receiver);
 
+        self
+    }
+
+    pub fn tag(mut self, tag: &str) -> Self {
+        self.tag = tag.to_string();
         self
     }
 }

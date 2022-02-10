@@ -21,6 +21,7 @@ impl FrameProcessor for OnErrorSwitch {
         debug!("Drop reason: {:?}", frame_data.get_drop_reason());
 
         if frame_data.get_drop_reason().is_some() {
+            debug!("Feeding frame");
             self.feeder.feed(frame_data);
             None
         } else {

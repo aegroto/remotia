@@ -1,8 +1,11 @@
 use std::time::Duration;
 
-use remotia::{server::pipeline::ascode::{component::Component, AscodePipeline}, processors::{error_switch::OnErrorSwitch, frame_drop::ThresholdBasedFrameDropper}};
+use remotia::{
+    processors::{error_switch::OnErrorSwitch, frame_drop::ThresholdBasedFrameDropper},
+    server::pipeline::ascode::{component::Component, AscodePipeline},
+};
 use remotia_buffer_utils::BufferAllocator;
-use remotia_core_loggers::{stats::ConsoleAverageStatsLogger, printer::ConsoleFrameDataPrinter};
+use remotia_core_loggers::{printer::ConsoleFrameDataPrinter, stats::ConsoleAverageStatsLogger};
 use remotia_core_renderers::beryllium::BerylliumRenderer;
 use remotia_ffmpeg_codecs::decoders::h264::H264Decoder;
 use remotia_profilation_utils::time::{add::TimestampAdder, diff::TimestampDiffCalculator};
@@ -13,6 +16,7 @@ async fn main() -> std::io::Result<()> {
     env_logger::init();
 
     let error_handling_pipeline = AscodePipeline::new()
+        .tag("ErrorsHandler")
         .link(Component::new().add(ConsoleFrameDataPrinter::new()))
         .bind()
         .feedable();
@@ -23,6 +27,7 @@ async fn main() -> std::io::Result<()> {
 
     // Pipeline structure
     let main_pipeline = AscodePipeline::new()
+        .tag("ClientMain")
         .link(
             Component::new()
                 .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
@@ -33,7 +38,7 @@ async fn main() -> std::io::Result<()> {
                     "reception_time",
                 ))
                 .add(ThresholdBasedFrameDropper::new("reception_time", 10))
-                .add(OnErrorSwitch::new(&error_handling_pipeline))
+                .add(OnErrorSwitch::new(&error_handling_pipeline)),
         )
         .link(
             Component::new()
@@ -86,8 +91,8 @@ async fn main() -> std::io::Result<()> {
     let main_handle = main_pipeline.run();
     let error_handle = error_handling_pipeline.run();
 
-    main_handle.await;
-    error_handle.await;
+    main_handle.await.unwrap();
+    error_handle.await.unwrap();
 
     Ok(())
 }
