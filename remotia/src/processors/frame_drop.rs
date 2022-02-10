@@ -2,12 +2,12 @@ use crate::{traits::FrameProcessor, types::FrameData, error::DropReason};
 use async_trait::async_trait;
 use log::debug;
 
-pub struct TimestampDiffBasedFrameDropper {
+pub struct ThresholdBasedFrameDropper {
     threshold: u128,
     stat_id: String,
 }
 
-impl TimestampDiffBasedFrameDropper {
+impl ThresholdBasedFrameDropper {
     pub fn new(stat_id: &str, threshold: u128) -> Self {
         Self {
             threshold,
@@ -17,7 +17,7 @@ impl TimestampDiffBasedFrameDropper {
 }
 
 #[async_trait]
-impl FrameProcessor for TimestampDiffBasedFrameDropper {
+impl FrameProcessor for ThresholdBasedFrameDropper {
     async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
         let diff_value = frame_data.get(&self.stat_id);
 

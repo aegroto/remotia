@@ -14,7 +14,7 @@ impl ConsoleFrameDataPrinter {
 #[async_trait]
 impl FrameProcessor for ConsoleFrameDataPrinter {
     async fn process(&mut self, frame_data: FrameData) -> Option<FrameData> {
-        info!("{:#?}", frame_data);
+        info!("{}", frame_data);
         Some(frame_data)
     }
 }

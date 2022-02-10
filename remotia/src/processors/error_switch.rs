@@ -1,4 +1,5 @@
 use async_trait::async_trait;
+use log::debug;
 
 use crate::{server::pipeline::ascode::{AscodePipeline, feeder::AscodePipelineFeeder}, traits::FrameProcessor, types::FrameData};
 
@@ -17,6 +18,8 @@ impl OnErrorSwitch {
 #[async_trait]
 impl FrameProcessor for OnErrorSwitch {
     async fn process(&mut self, frame_data: FrameData) -> Option<FrameData> {
+        debug!("Drop reason: {:?}", frame_data.get_drop_reason());
+
         if frame_data.get_drop_reason().is_some() {
             self.feeder.feed(frame_data);
             None

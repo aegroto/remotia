@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use remotia::{
-    processors::{error_switch::OnErrorSwitch, frame_drop::TimestampDiffBasedFrameDropper, ticker::Ticker},
+    processors::{error_switch::OnErrorSwitch, frame_drop::ThresholdBasedFrameDropper, ticker::Ticker},
     server::pipeline::ascode::{component::Component, AscodePipeline},
 };
 use remotia_buffer_utils::BufferAllocator;
@@ -16,7 +16,7 @@ async fn main() -> std::io::Result<()> {
     env_logger::init();
 
     let error_handling_pipeline = AscodePipeline::new()
-        .add(Component::new().add(ConsoleFrameDataPrinter::new()))
+        .link(Component::new().add(ConsoleFrameDataPrinter::new()))
         .bind()
         .feedable();
 
@@ -26,21 +26,21 @@ async fn main() -> std::io::Result<()> {
     let buffer_size = width * height * 4;
 
     let main_pipeline = AscodePipeline::new()
-        .add(
+        .link(
             Component::new()
-                .add(Ticker::new(33))
+                .add(Ticker::new(1000))
                 .add(TimestampAdder::new("process_start_timestamp"))
                 .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("capture_timestamp"))
                 .add(capturer),
         )
-        .add(
+        .link(
             Component::new()
                 .add(TimestampDiffCalculator::new(
                     "capture_timestamp",
                     "capture_delay",
                 ))
-                .add(TimestampDiffBasedFrameDropper::new("capture_delay", 10))
+                .add(ThresholdBasedFrameDropper::new("capture_delay", 10))
                 .add(OnErrorSwitch::new(&error_handling_pipeline))
                 .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("encoding_start_timestamp"))
@@ -51,7 +51,7 @@ async fn main() -> std::io::Result<()> {
                 ))
                 .add(OnErrorSwitch::new(&error_handling_pipeline)),
         )
-        .add(
+        .link(
             Component::new()
                 .add(TimestampAdder::new("transmission_start_timestamp"))
                 .add(SRTFrameSender::new(5001, Duration::from_millis(50)).await)
@@ -65,7 +65,7 @@ async fn main() -> std::io::Result<()> {
                 ))
                 .add(OnErrorSwitch::new(&error_handling_pipeline)),
         )
-        .add(
+        .link(
             Component::new()
                 .add(
                     ConsoleAverageStatsLogger::new()

@@ -25,7 +25,7 @@ impl AscodePipeline {
         }
     }
 
-    pub fn add(mut self, component: Component) -> Self {
+    pub fn link(mut self, component: Component) -> Self {
         self.components.push(component);
         self
     }

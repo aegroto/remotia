@@ -1,8 +1,8 @@
 use std::time::Duration;
 
-use remotia::server::pipeline::ascode::{component::Component, AscodePipeline};
+use remotia::{server::pipeline::ascode::{component::Component, AscodePipeline}, processors::{error_switch::OnErrorSwitch, frame_drop::ThresholdBasedFrameDropper}};
 use remotia_buffer_utils::BufferAllocator;
-use remotia_core_loggers::stats::ConsoleAverageStatsLogger;
+use remotia_core_loggers::{stats::ConsoleAverageStatsLogger, printer::ConsoleFrameDataPrinter};
 use remotia_core_renderers::beryllium::BerylliumRenderer;
 use remotia_ffmpeg_codecs::decoders::h264::H264Decoder;
 use remotia_profilation_utils::time::{add::TimestampAdder, diff::TimestampDiffCalculator};
@@ -12,13 +12,18 @@ use remotia_srt::receiver::SRTFrameReceiver;
 async fn main() -> std::io::Result<()> {
     env_logger::init();
 
+    let error_handling_pipeline = AscodePipeline::new()
+        .link(Component::new().add(ConsoleFrameDataPrinter::new()))
+        .bind()
+        .feedable();
+
     let width = 1280;
     let height = 720;
     let buffer_size = width * height * 4;
 
     // Pipeline structure
-    let pipeline = AscodePipeline::new()
-        .add(
+    let main_pipeline = AscodePipeline::new()
+        .link(
             Component::new()
                 .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("reception_start_timestamp"))
@@ -26,9 +31,11 @@ async fn main() -> std::io::Result<()> {
                 .add(TimestampDiffCalculator::new(
                     "reception_start_timestamp",
                     "reception_time",
-                )),
+                ))
+                .add(ThresholdBasedFrameDropper::new("reception_time", 10))
+                .add(OnErrorSwitch::new(&error_handling_pipeline))
         )
-        .add(
+        .link(
             Component::new()
                 .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("decoding_start_timestamp"))
@@ -36,9 +43,10 @@ async fn main() -> std::io::Result<()> {
                 .add(TimestampDiffCalculator::new(
                     "decoding_start_timestamp",
                     "decoding_time",
-                )),
+                ))
+                .add(OnErrorSwitch::new(&error_handling_pipeline)),
         )
-        .add(
+        .link(
             Component::new()
                 .add(TimestampAdder::new("rendering_start_timestamp"))
                 .add(BerylliumRenderer::new(width as u32, height as u32))
@@ -53,9 +61,10 @@ async fn main() -> std::io::Result<()> {
                 .add(TimestampDiffCalculator::new(
                     "capture_timestamp",
                     "frame_delay",
-                )),
+                ))
+                .add(OnErrorSwitch::new(&error_handling_pipeline)),
         )
-        .add(
+        .link(
             Component::new()
                 .add(
                     ConsoleAverageStatsLogger::new()
@@ -74,7 +83,11 @@ async fn main() -> std::io::Result<()> {
         )
         .bind();
 
-    pipeline.run().await;
+    let main_handle = main_pipeline.run();
+    let error_handle = error_handling_pipeline.run();
+
+    main_handle.await;
+    error_handle.await;
 
     Ok(())
 }
