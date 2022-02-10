@@ -1,3 +1,5 @@
+use std::time::Duration;
+
 use remotia::server::pipeline::ascode::{component::Component, AscodePipeline};
 use remotia_buffer_utils::BufferAllocator;
 use remotia_core_loggers::stats::ConsoleAverageStatsLogger;
@@ -20,7 +22,7 @@ async fn main() -> std::io::Result<()> {
             Component::new()
                 .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("reception_start_timestamp"))
-                .add(SRTFrameReceiver::new("127.0.0.1:5001").await)
+                .add(SRTFrameReceiver::new("127.0.0.1:5001", Duration::from_millis(50)).await)
                 .add(TimestampDiffCalculator::new(
                     "reception_start_timestamp",
                     "reception_time",
@@ -43,17 +45,34 @@ async fn main() -> std::io::Result<()> {
                 .add(TimestampDiffCalculator::new(
                     "rendering_start_timestamp",
                     "rendering_time",
+                ))
+                .add(TimestampDiffCalculator::new(
+                    "capture_timestamp",
+                    "frame_delay",
                 )),
         )
-        .add(Component::new().add(ConsoleAverageStatsLogger {
-            values_to_log: vec![
-                "reception_time".to_string(),
-                "decoding_time".to_string(),
-                "rendering_time".to_string(),
-            ],
+        .add(
+            Component::new()
+                .add(ConsoleAverageStatsLogger {
+                    header: Some("Computational times".to_string()),
+                    values_to_log: vec![
+                        "reception_time".to_string(),
+                        "decoding_time".to_string(),
+                        "rendering_time".to_string(),
+                    ],
 
-            ..Default::default()
-        }))
+                    ..Default::default()
+                })
+                .add(ConsoleAverageStatsLogger {
+                    header: Some("Delay times".to_string()),
+                    values_to_log: vec![
+                        "reception_delay".to_string(),
+                        "frame_delay".to_string(),
+                    ],
+
+                    ..Default::default()
+                }),
+        )
         .bind();
 
     pipeline.run().await;

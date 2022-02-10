@@ -2,12 +2,12 @@ use std::time::{Instant, Duration};
 
 use async_trait::async_trait;
 
-use bytes::{Bytes, BytesMut};
+use bytes::{Bytes};
 use futures::SinkExt;
 
 use log::{debug, info};
 use remotia::{
-    common::{feedback::FeedbackMessage, network::FrameBody},
+    common::{feedback::FeedbackMessage},
     server::send::FrameSender,
     traits::FrameProcessor,
     types::FrameData,
@@ -16,6 +16,8 @@ use srt_tokio::{
     options::{ByteCount, PacketSize},
     SrtSocket,
 };
+
+use crate::SRTFrameData;
 
 pub struct SRTFrameSender {
     socket: SrtSocket,
@@ -40,25 +42,11 @@ impl SRTFrameSender {
     }
 
     async fn send_frame_data(&mut self, frame_data: &mut FrameData) {
-        let capture_timestamp = frame_data.get("capture_timestamp");
-
-        // Extract the slice of the encoded buffer which contains data to be transmitted
-        let encoded_size = frame_data.get("encoded_size") as usize;
-        let full_frame_buffer = frame_data
-            .get_writable_buffer_ref("encoded_frame_buffer")
-            .unwrap();
-
-        // Copy frame data to a local frame buffer
-        let mut frame_buffer = BytesMut::new(); // full_frame_buffer.split_to(encoded_size);
-        frame_buffer.resize(encoded_size, 0);
-        frame_buffer.copy_from_slice(&full_frame_buffer[..encoded_size]);
+        // Create the network DTO
+        let srt_frame_data = SRTFrameData::from_frame_data(frame_data);
 
         debug!("Sending frame body...");
-        let obj = FrameBody {
-            capture_timestamp,
-            frame_pixels: frame_buffer.to_vec(),
-        };
-        let binarized_obj = Bytes::from(bincode::serialize(&obj).unwrap());
+        let binarized_obj = Bytes::from(bincode::serialize(&srt_frame_data).unwrap());
 
         self.socket
             .send((Instant::now(), binarized_obj))

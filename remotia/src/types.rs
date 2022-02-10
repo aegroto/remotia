@@ -16,6 +16,10 @@ pub struct FrameData {
 }
 
 impl FrameData {
+    //*******// 
+    // Stats //
+    //*******// 
+
     pub fn set(&mut self, key: &str, value: u128) {
         self.stats.insert(key.to_string(), value);
     }
@@ -27,6 +31,18 @@ impl FrameData {
     pub fn has(&self, key: &str) -> bool {
         self.stats.contains_key(key)
     }
+
+    pub fn get_stats(&self) -> &HashMap<String, u128> {
+        &self.stats
+    }
+
+    pub fn merge_stats(&mut self, other_stats: HashMap<String, u128>) {
+        self.stats.extend(other_stats);
+    }
+
+    //*********//
+    // Buffers //
+    //*********//
 
     pub fn insert_readonly_buffer(&mut self, key: &str, buffer: Bytes) {
         self.readonly_buffers.insert(key.to_string(), buffer);
@@ -63,6 +79,10 @@ impl FrameData {
         self.writable_buffers.contains_key(key)
     }
 
+    //*************//
+    // Drop reason //
+    //*************//
+
     pub fn set_drop_reason(&mut self, error: Option<DropReason>) {
         self.drop_reason = error;
     }
@@ -70,6 +90,10 @@ impl FrameData {
     pub fn get_drop_reason(&self) -> Option<DropReason> {
         self.drop_reason
     }
+
+    //*******//
+    // Other //
+    //*******//
 
     pub fn clone_without_buffers(&self) -> Self {
         Self {

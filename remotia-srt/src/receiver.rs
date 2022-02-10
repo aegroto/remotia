@@ -1,31 +1,31 @@
-use std::{
-    time::{SystemTime, UNIX_EPOCH},
-};
+use std::time::{SystemTime, UNIX_EPOCH, Instant, Duration};
 
 use async_trait::async_trait;
+use bytes::Bytes;
 use remotia::{
-    client::{
-        receive::{FrameReceiver, ReceivedFrame},
-    },
+    client::receive::{FrameReceiver, ReceivedFrame},
     common::{feedback::FeedbackMessage, network::FrameBody},
-    types::FrameData,
     traits::FrameProcessor,
+    types::FrameData,
 };
 
 use futures::TryStreamExt;
-use log::{debug, info, warn};
-use srt_tokio::{SrtSocket};
+use log::{debug, info};
+use srt_tokio::SrtSocket;
 
 use remotia::error::DropReason;
+
+use crate::SRTFrameData;
 
 pub struct SRTFrameReceiver {
     socket: SrtSocket,
 }
 
 impl SRTFrameReceiver {
-    pub async fn new(server_address: &str) -> Self {
+    pub async fn new(server_address: &str, latency: Duration) -> Self {
         info!("Connecting...");
         let socket = SrtSocket::builder()
+            .latency(latency)
             .call(server_address, None)
             .await
             .unwrap();
@@ -41,20 +41,10 @@ impl SRTFrameReceiver {
     ) -> Result<ReceivedFrame, DropReason> {
         debug!("Receiving encoded frame bytes...");
 
-        let receive_result = self.socket.try_next().await;
-
-        if let Err(error) = receive_result {
-            debug!("Connection error: {:?}", error);
-            return Err(DropReason::ConnectionError);
+        let receive_result = self.receive_binarized().await;
+        if receive_result.is_err() {
+            return Err(receive_result.unwrap_err());
         }
-
-        let receive_result = receive_result.unwrap();
-
-        if receive_result.is_none() {
-            debug!("None receive result");
-            return Err(DropReason::EmptyFrame);
-        }
-
         let (instant, binarized_obj) = receive_result.unwrap();
 
         match bincode::deserialize::<FrameBody>(&binarized_obj) {
@@ -86,26 +76,54 @@ impl SRTFrameReceiver {
             }
         }
     }
+
+    async fn receive_binarized(&mut self) -> Result<(Instant, Bytes), DropReason> {
+        let receive_result = self.socket.try_next().await;
+
+        if let Err(error) = receive_result {
+            debug!("Connection error: {:?}", error);
+            return Err(DropReason::ConnectionError);
+        }
+
+        let receive_result = receive_result.unwrap();
+
+        if receive_result.is_none() {
+            debug!("None receive result");
+            return Err(DropReason::EmptyFrame);
+        }
+
+        Ok(receive_result.unwrap())
+    }
 }
 
 #[async_trait]
 impl FrameProcessor for SRTFrameReceiver {
     async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
-        let frame_buffer = frame_data
-            .get_writable_buffer_ref("encoded_frame_buffer")
-            .unwrap();
+        debug!("Receiving binarized frame DTO...");
 
-        match self.receive_frame_pixels(frame_buffer).await {
-            Ok(received_frame) => {
-                frame_data.set("encoded_size", received_frame.buffer_size as u128);
-                frame_data.set("capture_timestamp", received_frame.capture_timestamp);
-                frame_data.set("reception_delay", received_frame.reception_delay);
-            }
-            Err(error) => {
-                warn!("Error during frame reception: {}", error);
-                frame_data.set_drop_reason(Some(error))
-            },
-        };
+        let receive_result = self.receive_binarized().await;
+        if receive_result.is_err() {
+            frame_data.set_drop_reason(Some(receive_result.unwrap_err()));
+            return Some(frame_data);
+        }
+
+        let (transmission_instant, binarized_obj) = receive_result.unwrap();
+
+        let reception_delay = transmission_instant.elapsed().as_millis();
+        frame_data.set("reception_delay", reception_delay);
+
+        let serialization_result = bincode::deserialize::<SRTFrameData>(&binarized_obj);
+
+        if serialization_result.is_ok() {
+            let srt_frame_data = serialization_result.unwrap();
+
+            // Convert network data to pipeline data
+            srt_frame_data.merge_with_frame_data(&mut frame_data);
+        } else {
+            debug!("Invalid packet error: {:?}", serialization_result.unwrap_err());
+            frame_data.set_drop_reason(Some(DropReason::InvalidPacket));
+        }
+
 
         Some(frame_data)
     }

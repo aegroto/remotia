@@ -1,7 +1,7 @@
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use thiserror::Error;
 
-#[derive(Error, Debug, Serialize, Clone, PartialEq, Eq, Copy)]
+#[derive(Error, Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Copy)]
 pub enum DropReason {
     #[error("Invalid whole frame header")]
     InvalidWholeFrameHeader,
