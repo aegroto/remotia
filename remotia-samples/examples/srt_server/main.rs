@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use remotia::{
-    processors::{error_switch::OnErrorSwitch, frame_drop::TimestampDiffBasedFrameDropper},
+    processors::{error_switch::OnErrorSwitch, frame_drop::TimestampDiffBasedFrameDropper, ticker::Ticker},
     server::pipeline::ascode::{component::Component, AscodePipeline},
 };
 use remotia_buffer_utils::BufferAllocator;
@@ -28,7 +28,7 @@ async fn main() -> std::io::Result<()> {
     let main_pipeline = AscodePipeline::new()
         .add(
             Component::new()
-                .with_tick(33)
+                .add(Ticker::new(33))
                 .add(TimestampAdder::new("process_start_timestamp"))
                 .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("capture_timestamp"))
