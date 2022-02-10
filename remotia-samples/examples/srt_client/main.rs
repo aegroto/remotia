@@ -6,10 +6,7 @@ use remotia::{
     server::pipeline::ascode::{component::Component, AscodePipeline},
 };
 use remotia_buffer_utils::BufferAllocator;
-use remotia_core_loggers::{
-    errors::ConsoleDropReasonLogger,
-    stats::ConsoleAverageStatsLogger,
-};
+use remotia_core_loggers::{errors::ConsoleDropReasonLogger, stats::ConsoleAverageStatsLogger};
 use remotia_core_renderers::beryllium::BerylliumRenderer;
 use remotia_ffmpeg_codecs::decoders::h264::H264Decoder;
 use remotia_profilation_utils::time::{add::TimestampAdder, diff::TimestampDiffCalculator};
@@ -67,9 +64,11 @@ async fn main() -> std::io::Result<()> {
                     "capture_timestamp",
                     "pre_render_frame_delay",
                 ))
-                .add(ThresholdBasedFrameDropper::new("pre_render_frame_delay", 200))
+                .add(ThresholdBasedFrameDropper::new(
+                    "pre_render_frame_delay",
+                    200,
+                ))
                 .add(OnErrorSwitch::new(&error_handling_pipeline))
-
                 .add(TimestampAdder::new("rendering_start_timestamp"))
                 .add(BerylliumRenderer::new(width as u32, height as u32))
                 .add(TimestampDiffCalculator::new(
@@ -105,11 +104,13 @@ async fn main() -> std::io::Result<()> {
         )
         .bind();
 
-    let main_handle = main_pipeline.run();
-    let error_handle = error_handling_pipeline.run();
+    let mut handles = Vec::new();
+    handles.extend(main_pipeline.run());
+    handles.extend(error_handling_pipeline.run());
 
-    main_handle.await.unwrap();
-    error_handle.await.unwrap();
+    for handle in handles {
+        handle.await.unwrap()
+    }
 
     Ok(())
 }

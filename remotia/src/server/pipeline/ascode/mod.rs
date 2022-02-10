@@ -39,24 +39,20 @@ impl AscodePipeline {
         AscodePipelineFeeder::new(sender)
     }
 
-    pub fn run(self) -> JoinHandle<()> {
+    pub fn run(self) -> Vec<JoinHandle<()>> {
         info!("[{}] Launching threads...", self.tag);
         if !self.bound {
             panic!("[{}] Called 'run' before binding the pipeline", self.tag);
         }
 
-        tokio::spawn(async move {
-            let mut handles = Vec::new();
+        let mut handles = Vec::new();
 
-            for component in self.components {
-                let handle = component.launch();
-                handles.push(handle);
-            }
+        for component in self.components {
+            let handle = component.launch();
+            handles.push(handle);
+        }
 
-            for handle in handles {
-                handle.await.unwrap();
-            }
-        })
+        handles
     }
 
     pub fn bind(mut self) -> Self {

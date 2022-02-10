@@ -102,11 +102,13 @@ async fn main() -> std::io::Result<()> {
         )
         .bind();
 
-    let main_handle = main_pipeline.run();
-    let error_handle = error_handling_pipeline.run();
+    let mut handles = Vec::new();
+    handles.extend(main_pipeline.run());
+    handles.extend(error_handling_pipeline.run());
 
-    main_handle.await.unwrap();
-    error_handle.await.unwrap();
+    for handle in handles {
+        handle.await.unwrap()
+    }
 
     Ok(())
 }
