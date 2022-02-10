@@ -3,7 +3,7 @@ use std::time::Duration;
 use remotia::{
     error::DropReason,
     processors::{
-        error_switch::OnErrorSwitch, frame_drop::ThresholdBasedFrameDropper,
+        error_switch::OnErrorSwitch, frame_drop::threshold::ThresholdBasedFrameDropper,
         pool_switch::PoolingSwitch, switch::Switch, ticker::Ticker,
     },
     server::pipeline::ascode::{component::Component, AscodePipeline},
@@ -39,7 +39,7 @@ async fn main() -> std::io::Result<()> {
 
     let tail_pipeline = build_tail_pipeline(&error_handling_pipeline).await;
 
-    let encoders_count = 2;
+    let encoders_count = 4;
     let mut encoding_switch = PoolingSwitch::new();
     let encoding_pipelines: Vec<AscodePipeline> = (0..encoders_count)
         .map(|_| {

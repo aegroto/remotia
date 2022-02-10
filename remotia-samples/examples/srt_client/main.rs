@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use remotia::{
     error::DropReason,
-    processors::{error_switch::OnErrorSwitch, frame_drop::ThresholdBasedFrameDropper},
+    processors::{error_switch::OnErrorSwitch, frame_drop::threshold::ThresholdBasedFrameDropper},
     server::pipeline::ascode::{component::Component, AscodePipeline},
 };
 use remotia_buffer_utils::BufferAllocator;
