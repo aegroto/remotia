@@ -1409,6 +1409,7 @@ dependencies = [
  "log",
  "remotia",
  "rsmpeg",
+ "tokio 1.16.1",
 ]
 
 [[package]]
