@@ -1,6 +1,6 @@
 use std::time::Duration;
 
-use remotia::{server::pipeline::ascode::{component::Component, AscodePipeline}, processors::error_switch::OnErrorSwitch};
+use remotia::{server::pipeline::ascode::{component::Component, AscodePipeline}, processors::{error_switch::OnErrorSwitch, frame_drop::TimestampDiffBasedFrameDropper}};
 use remotia_buffer_utils::BufferAllocator;
 use remotia_core_capturers::scrap::ScrapFrameCapturer;
 use remotia_core_loggers::{stats::ConsoleAverageStatsLogger, printer::ConsoleFrameDataPrinter};
@@ -26,12 +26,22 @@ async fn main() -> std::io::Result<()> {
         .add(
             Component::new()
                 .with_tick(33)
+                .add(TimestampAdder::new("process_start_timestamp"))
                 .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("capture_timestamp"))
                 .add(capturer),
         )
         .add(
             Component::new()
+                .add(TimestampDiffCalculator::new(
+                    "capture_timestamp",
+                    "capture_delay",
+                ))
+                .add(TimestampDiffBasedFrameDropper::new(
+                    "capture_delay",
+                    10
+                ))
+                .add(OnErrorSwitch::new(&error_handling_pipeline))
                 .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("encoding_start_timestamp"))
                 .add(H264Encoder::new(buffer_size, width as i32, height as i32))
@@ -49,17 +59,33 @@ async fn main() -> std::io::Result<()> {
                     "transmission_start_timestamp",
                     "transmission_time",
                 ))
+                .add(TimestampDiffCalculator::new(
+                    "process_start_timestamp",
+                    "total_time",
+                ))
                 .add(OnErrorSwitch::new(&error_handling_pipeline)),
         )
-        .add(Component::new().add(ConsoleAverageStatsLogger {
-            values_to_log: vec![
-                "encoded_size".to_string(),
-                "encoding_time".to_string(),
-                "transmission_time".to_string(),
-            ],
+        .add(Component::new()
+            .add(ConsoleAverageStatsLogger {
+                header: Some(" ## Computational times".to_string()),
+                values_to_log: vec![
+                    "encoded_size".to_string(),
+                    "encoding_time".to_string(),
+                    "transmission_time".to_string(),
+                    "total_time".to_string(),
+                ],
 
-            ..Default::default()
-        }))
+                ..Default::default()
+            })
+            .add(ConsoleAverageStatsLogger {
+                header: Some(" ## Delay times".to_string()),
+                values_to_log: vec![
+                    "capture_delay".to_string(),
+                ],
+
+                ..Default::default()
+            })
+        )
         .bind();
 
     let main_handle = main_pipeline.run();
