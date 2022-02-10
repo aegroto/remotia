@@ -86,7 +86,7 @@ impl H264Decoder {
                     Ok(_) => (),
                     Err(e) => {
                         debug!("Error on send packet: {}", e);
-                        return Some(DropReason::FFMpegSendPacketError);
+                        return Some(DropReason::CodecError);
                     }
                 }
 

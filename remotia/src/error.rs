@@ -27,8 +27,8 @@ pub enum DropReason {
     #[error("Connection error")]
     ConnectionError,
 
-    #[error("H264 Send packet error")]
-    FFMpegSendPacketError,
+    #[error("Generic codec error")]
+    CodecError,
 
     #[error("Timeout")]
     Timeout,

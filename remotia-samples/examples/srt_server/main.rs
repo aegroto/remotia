@@ -1,6 +1,7 @@
 use std::time::Duration;
 
 use remotia::{
+    error::DropReason,
     processors::{
         error_switch::OnErrorSwitch, frame_drop::ThresholdBasedFrameDropper, ticker::Ticker,
     },
@@ -8,7 +9,7 @@ use remotia::{
 };
 use remotia_buffer_utils::BufferAllocator;
 use remotia_core_capturers::scrap::ScrapFrameCapturer;
-use remotia_core_loggers::{printer::ConsoleFrameDataPrinter, stats::ConsoleAverageStatsLogger};
+use remotia_core_loggers::{errors::ConsoleDropReasonLogger, stats::ConsoleAverageStatsLogger};
 use remotia_ffmpeg_codecs::encoders::h264::H264Encoder;
 use remotia_profilation_utils::time::{add::TimestampAdder, diff::TimestampDiffCalculator};
 use remotia_srt::sender::SRTFrameSender;
@@ -19,7 +20,14 @@ async fn main() -> std::io::Result<()> {
 
     let error_handling_pipeline = AscodePipeline::new()
         .tag("ErrorsHandler")
-        .link(Component::new().add(ConsoleFrameDataPrinter::new()))
+        .link(
+            Component::new().add(
+                ConsoleDropReasonLogger::new()
+                    .log(DropReason::StaleFrame)
+                    .log(DropReason::ConnectionError)
+                    .log(DropReason::CodecError),
+            ),
+        )
         .bind()
         .feedable();
 
@@ -32,7 +40,7 @@ async fn main() -> std::io::Result<()> {
         .tag("ServerMain")
         .link(
             Component::new()
-                .add(Ticker::new(1000))
+                .add(Ticker::new(33))
                 .add(TimestampAdder::new("process_start_timestamp"))
                 .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("capture_timestamp"))
@@ -57,6 +65,13 @@ async fn main() -> std::io::Result<()> {
         )
         .link(
             Component::new()
+                .add(TimestampDiffCalculator::new(
+                    "capture_timestamp",
+                    "pre_transmission_delay",
+                ))
+                .add(ThresholdBasedFrameDropper::new("pre_transmission_delay", 50))
+                .add(OnErrorSwitch::new(&error_handling_pipeline))
+
                 .add(TimestampAdder::new("transmission_start_timestamp"))
                 .add(SRTFrameSender::new(5001, Duration::from_millis(50)).await)
                 .add(TimestampDiffCalculator::new(

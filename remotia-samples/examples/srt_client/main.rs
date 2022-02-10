@@ -1,11 +1,15 @@
 use std::time::Duration;
 
 use remotia::{
+    error::DropReason,
     processors::{error_switch::OnErrorSwitch, frame_drop::ThresholdBasedFrameDropper},
     server::pipeline::ascode::{component::Component, AscodePipeline},
 };
 use remotia_buffer_utils::BufferAllocator;
-use remotia_core_loggers::{printer::ConsoleFrameDataPrinter, stats::ConsoleAverageStatsLogger};
+use remotia_core_loggers::{
+    errors::ConsoleDropReasonLogger,
+    stats::ConsoleAverageStatsLogger,
+};
 use remotia_core_renderers::beryllium::BerylliumRenderer;
 use remotia_ffmpeg_codecs::decoders::h264::H264Decoder;
 use remotia_profilation_utils::time::{add::TimestampAdder, diff::TimestampDiffCalculator};
@@ -17,7 +21,14 @@ async fn main() -> std::io::Result<()> {
 
     let error_handling_pipeline = AscodePipeline::new()
         .tag("ErrorsHandler")
-        .link(Component::new().add(ConsoleFrameDataPrinter::new()))
+        .link(
+            Component::new().add(
+                ConsoleDropReasonLogger::new()
+                    .log(DropReason::StaleFrame)
+                    .log(DropReason::ConnectionError)
+                    .log(DropReason::CodecError),
+            ),
+        )
         .bind()
         .feedable();
 
@@ -37,7 +48,6 @@ async fn main() -> std::io::Result<()> {
                     "reception_start_timestamp",
                     "reception_time",
                 ))
-                .add(ThresholdBasedFrameDropper::new("reception_time", 10))
                 .add(OnErrorSwitch::new(&error_handling_pipeline)),
         )
         .link(
@@ -53,6 +63,13 @@ async fn main() -> std::io::Result<()> {
         )
         .link(
             Component::new()
+                .add(TimestampDiffCalculator::new(
+                    "capture_timestamp",
+                    "pre_render_frame_delay",
+                ))
+                .add(ThresholdBasedFrameDropper::new("pre_render_frame_delay", 200))
+                .add(OnErrorSwitch::new(&error_handling_pipeline))
+
                 .add(TimestampAdder::new("rendering_start_timestamp"))
                 .add(BerylliumRenderer::new(width as u32, height as u32))
                 .add(TimestampDiffCalculator::new(
