@@ -47,31 +47,30 @@ async fn main() -> std::io::Result<()> {
                     "rendering_time",
                 ))
                 .add(TimestampDiffCalculator::new(
+                    "reception_start_timestamp",
+                    "total_time",
+                ))
+                .add(TimestampDiffCalculator::new(
                     "capture_timestamp",
                     "frame_delay",
                 )),
         )
         .add(
             Component::new()
-                .add(ConsoleAverageStatsLogger {
-                    header: Some("Computational times".to_string()),
-                    values_to_log: vec![
-                        "reception_time".to_string(),
-                        "decoding_time".to_string(),
-                        "rendering_time".to_string(),
-                    ],
-
-                    ..Default::default()
-                })
-                .add(ConsoleAverageStatsLogger {
-                    header: Some("Delay times".to_string()),
-                    values_to_log: vec![
-                        "reception_delay".to_string(),
-                        "frame_delay".to_string(),
-                    ],
-
-                    ..Default::default()
-                }),
+                .add(
+                    ConsoleAverageStatsLogger::new()
+                        .header("--- Computational times")
+                        .log("reception_time")
+                        .log("decoding_time")
+                        .log("rendering_time")
+                        .log("total_time"),
+                )
+                .add(
+                    ConsoleAverageStatsLogger::new()
+                        .header("--- Delay times")
+                        .log("reception_delay")
+                        .log("frame_delay"),
+                ),
         )
         .bind();
 

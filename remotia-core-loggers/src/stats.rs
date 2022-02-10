@@ -1,24 +1,23 @@
 use std::time::{Duration, Instant};
 
 use remotia::{
-    common::feedback::FeedbackMessage,
-    server::{profiling::ServerProfiler},
-    types::FrameData, traits::FrameProcessor,
+    common::feedback::FeedbackMessage, server::profiling::ServerProfiler, traits::FrameProcessor,
+    types::FrameData,
 };
 
 use async_trait::async_trait;
 use log::info;
 
 pub struct ConsoleAverageStatsLogger {
-    pub header: Option<String>,
-    pub values_to_log: Vec<String>,
-    pub round_duration: Duration,
+    header: Option<String>,
+    values_to_log: Vec<String>,
+    round_duration: Duration,
 
-    pub current_round_start: Instant,
+    current_round_start: Instant,
 
-    pub logged_frames: Vec<FrameData>,
+    logged_frames: Vec<FrameData>,
 
-    pub log_errors: bool,
+    log_errors: bool,
 }
 
 impl Default for ConsoleAverageStatsLogger {
@@ -35,6 +34,22 @@ impl Default for ConsoleAverageStatsLogger {
 }
 
 impl ConsoleAverageStatsLogger {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    // Building functions
+    pub fn header(mut self, header: &str) -> Self {
+        self.header = Some(header.to_string());
+        self
+    }
+
+    pub fn log(mut self, value: &str) -> Self {
+        self.values_to_log.push(value.to_string());
+        self
+    }
+
+    // Logging functions
     fn print_round_stats(&self) {
         if self.header.is_some() {
             info!("{}", self.header.as_ref().unwrap());
