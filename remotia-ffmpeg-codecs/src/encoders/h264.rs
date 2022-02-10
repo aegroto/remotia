@@ -153,7 +153,10 @@ fn init_encoder(width: i32, height: i32, crf: u32) -> AVCodecContext {
     let options = AVDictionary::new(cstr!(""), cstr!(""), 0)
         .set(cstr!("preset"), cstr!("ultrafast"), 0)
         .set(cstr!("crf"), &crf_str, 0)
+        .set(cstr!("threads"), cstr!("0"), 0)
+        .set(cstr!("thread_type"), cstr!("frame"), 0)
         .set(cstr!("tune"), cstr!("zerolatency"), 0);
+
     encode_context.open(Some(options)).unwrap();
     encode_context
 }
