@@ -39,7 +39,7 @@ async fn main() -> std::io::Result<()> {
 
     let tail_pipeline = build_tail_pipeline(&error_handling_pipeline).await;
 
-    let encoders_count = 4;
+    let encoders_count = 2;
     let mut encoding_switch = PoolingSwitch::new();
     let encoding_pipelines: Vec<AscodePipeline> = (0..encoders_count)
         .map(|_| {

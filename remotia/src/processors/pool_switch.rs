@@ -40,3 +40,35 @@ impl FrameProcessor for PoolingSwitch {
         None
     }
 }
+
+pub struct DepoolingSwitch {
+    entries: HashMap<u128, AscodePipelineFeeder>
+}
+
+impl DepoolingSwitch {
+    pub fn new() -> Self {
+        Self {
+            entries: HashMap::new(),
+        }
+    }
+
+    pub fn entry(mut self, key: u128, pipeline: &AscodePipeline) -> Self {
+        self.entries.insert(key, pipeline.get_feeder());
+        self
+    }
+}
+
+#[async_trait]
+impl FrameProcessor for DepoolingSwitch {
+    async fn process(&mut self, frame_data: FrameData) -> Option<FrameData> {
+        let key = frame_data.get("pool_key");
+        let feeder = self.entries.get(&key).unwrap();
+
+        debug!("Feeding to pipeline #{}...", key);
+
+        feeder.feed(frame_data);
+
+        None
+    }
+}
+

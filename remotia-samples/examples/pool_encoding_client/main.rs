@@ -3,7 +3,7 @@ use std::time::Duration;
 use remotia::{
     error::DropReason,
     processors::{
-        error_switch::OnErrorSwitch, frame_drop::ThresholdBasedFrameDropper, switch::Switch,
+        error_switch::OnErrorSwitch, frame_drop::ThresholdBasedFrameDropper, switch::Switch, pool_switch::DepoolingSwitch,
     },
     server::pipeline::ascode::{component::Component, AscodePipeline},
 };
@@ -26,7 +26,18 @@ async fn main() -> std::io::Result<()> {
 
     let tail_pipeline = build_tail_pipeline(&error_handling_pipeline, width, height);
 
-    let decoding_pipeline = build_decoding_pipeline(buffer_size, &error_handling_pipeline, &tail_pipeline);
+    let decoders_count = 2;
+    let mut decoding_switch = DepoolingSwitch::new();
+
+    let decoding_pipelines: Vec<AscodePipeline> = (0..decoders_count)
+        .map(|_| {
+            build_decoding_pipeline(buffer_size, &error_handling_pipeline, &tail_pipeline)
+        })
+        .collect();
+
+    for key in 0..decoders_count {
+        decoding_switch = decoding_switch.entry(key, decoding_pipelines.get(key as usize).unwrap());
+    }
 
     let reception_pipeline = AscodePipeline::new()
         .tag("Reception")
@@ -40,7 +51,7 @@ async fn main() -> std::io::Result<()> {
                     "reception_time",
                 ))
                 .add(OnErrorSwitch::new(&error_handling_pipeline))
-                .add(Switch::new(&decoding_pipeline)),
+                .add(decoding_switch),
         )
         .bind();
 
@@ -48,7 +59,9 @@ async fn main() -> std::io::Result<()> {
     handles.extend(error_handling_pipeline.run());
 
     handles.extend(reception_pipeline.run());
-    handles.extend(decoding_pipeline.run());
+    for decoding_pipeline in decoding_pipelines {
+        handles.extend(decoding_pipeline.run());
+    }
     handles.extend(tail_pipeline.run());
 
     for handle in handles {
