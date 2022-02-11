@@ -7,10 +7,10 @@ use rsmpeg::{
 use cstr::cstr;
 
 use remotia::{
-    common::feedback::FeedbackMessage, error::DropReason, traits::FrameProcessor, types::FrameData,
+    common::feedback::FeedbackMessage, error::DropReason, traits::FrameProcessor, types::FrameData, client::decode::Decoder,
 };
 
-use super::{utils::yuv2bgr::raster, Decoder};
+use super::{utils::yuv2bgr::raster};
 use async_trait::async_trait;
 
 pub struct H264Decoder {

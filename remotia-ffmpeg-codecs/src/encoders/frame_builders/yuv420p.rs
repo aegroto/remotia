@@ -1,21 +1,17 @@
+use std::time::Instant;
+
 use log::debug;
-use remotia::server::utils::bgr2yuv::raster;
+use remotia::server::utils::bgr2yuv::{raster};
 use rsmpeg::{avcodec::AVCodecContext, avutil::AVFrame};
 
 pub struct YUV420PAVFrameBuilder {
     frame_count: i64,
-    y_pixels: Vec<u8>,
-    u_pixels: Vec<u8>,
-    v_pixels: Vec<u8>,
 }
 
 impl YUV420PAVFrameBuilder {
-    pub fn new(width: usize, height: usize) -> Self {
+    pub fn new() -> Self {
         Self {
             frame_count: 0,
-            y_pixels: vec![0; width * height],
-            u_pixels: vec![0; (width * height) / 4],
-            v_pixels: vec![0; (width * height) / 4],
         }
     }
 
@@ -43,23 +39,21 @@ impl YUV420PAVFrameBuilder {
         let linesize_y = linesize[0] as usize;
         let linesize_cb = linesize[1] as usize;
         let linesize_cr = linesize[2] as usize;
-        let y_data = unsafe { std::slice::from_raw_parts_mut(data[0], height * linesize_y) };
-        let cb_data = unsafe { std::slice::from_raw_parts_mut(data[1], height / 2 * linesize_cb) };
-        let cr_data = unsafe { std::slice::from_raw_parts_mut(data[2], height / 2 * linesize_cr) };
+        let mut y_data = unsafe { std::slice::from_raw_parts_mut(data[0], height * linesize_y) };
+        let mut cb_data = unsafe { std::slice::from_raw_parts_mut(data[1], height / 2 * linesize_cb) };
+        let mut cr_data = unsafe { std::slice::from_raw_parts_mut(data[2], height / 2 * linesize_cr) };
 
-        self.u_pixels.fill(0);
-        self.v_pixels.fill(0);
+        cb_data.fill(0);
+        cr_data.fill(0);
 
+        let start_time = Instant::now();
         raster::bgra_to_yuv_separate(
             frame_buffer,
-            &mut self.y_pixels,
-            &mut self.u_pixels,
-            &mut self.v_pixels,
+            &mut y_data,
+            &mut cb_data,
+            &mut cr_data,
         );
-
-        y_data.copy_from_slice(&self.y_pixels);
-        cb_data.copy_from_slice(&self.u_pixels);
-        cr_data.copy_from_slice(&self.v_pixels);
+        debug!("Time: {}", start_time.elapsed().as_millis());
 
         debug!("Created avframe #{}", avframe.pts);
 

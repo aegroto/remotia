@@ -73,7 +73,7 @@ impl H264Encoder {
 
             encode_context: init_encoder(width, height, 21),
 
-            yuv420_avframe_builder: YUV420PAVFrameBuilder::new(width as usize, height as usize),
+            yuv420_avframe_builder: YUV420PAVFrameBuilder::new(),
             ffmpeg_encoding_bridge: FFMpegEncodingBridge::new(frame_buffer_size),
         }
     }
