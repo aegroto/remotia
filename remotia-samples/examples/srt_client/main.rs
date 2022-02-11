@@ -23,7 +23,9 @@ async fn main() -> std::io::Result<()> {
                 ConsoleDropReasonLogger::new()
                     .log(DropReason::StaleFrame)
                     .log(DropReason::ConnectionError)
-                    .log(DropReason::CodecError),
+                    .log(DropReason::CodecError)
+                    .log(DropReason::NoDecodedFrames)
+                    .log(DropReason::ConnectionError),
             ),
         )
         .bind()
