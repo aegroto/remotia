@@ -99,6 +99,7 @@ fn init_encoder(width: i32, height: i32, crf: u32, x264opts: &CString) -> AVCode
 
     let options = AVDictionary::new(cstr!(""), cstr!(""), 0)
         .set(cstr!("quality"), cstr!("realtime"), 0)
+        .set(cstr!("g"), cstr!("1"), 0)
         .set(cstr!("speed"), cstr!("6"), 0);
 
     encode_context.open(Some(options)).unwrap();

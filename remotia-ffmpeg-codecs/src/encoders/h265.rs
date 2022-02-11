@@ -109,9 +109,6 @@ impl H265Encoder {
     }
 
     fn encode_on_frame_data(&mut self, frame_data: &mut FrameData) {
-        let key_frame = self.state.encoded_frames % 4 == 0;
-        debug!("Encoding using x265 (keyframe = {})...", key_frame);
-
         let input_buffer = frame_data
             .extract_writable_buffer("raw_frame_buffer")
             .expect("No raw frame buffer in frame DTO");
@@ -123,7 +120,7 @@ impl H265Encoder {
         let avframe = self.yuv420_avframe_builder.create_avframe(
             &mut self.encode_context,
             &input_buffer,
-            key_frame,
+            false,
         );
         frame_data.set(
             "avframe_building_time",
