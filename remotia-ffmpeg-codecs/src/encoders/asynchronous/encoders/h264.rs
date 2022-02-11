@@ -6,12 +6,10 @@ use std::{
     sync::{Arc, Mutex}, time::Instant,
 };
 
-use log::debug;
 use remotia::{error::DropReason, traits::FrameProcessor, types::FrameData};
 use rsmpeg::{
     avcodec::{AVCodec, AVCodecContext},
     avutil::AVDictionary,
-    error::RsmpegError,
     ffi,
 };
 
@@ -39,7 +37,7 @@ impl AsyncH264Encoder {
     }
 
     pub fn pusher(&self) -> AsyncH264EncoderFramePusher {
-        AsyncH264EncoderFramePusher::new(self.encode_context.clone(), self.width, self.height)
+        AsyncH264EncoderFramePusher::new(self.encode_context.clone())
     }
 
     pub fn puller(&self) -> AsyncH264EncoderPacketPuller {
@@ -81,7 +79,7 @@ pub struct AsyncH264EncoderFramePusher {
 unsafe impl Send for AsyncH264EncoderFramePusher {}
 
 impl AsyncH264EncoderFramePusher {
-    pub fn new(encode_context: Arc<Mutex<AVCodecContext>>, width: i32, height: i32) -> Self {
+    pub fn new(encode_context: Arc<Mutex<AVCodecContext>>) -> Self {
         Self {
             encode_context,
             yuv420_avframe_builder: YUV420PAVFrameBuilder::new(),

@@ -1,7 +1,7 @@
 use std::time::Instant;
 
 use log::debug;
-use remotia::server::utils::bgr2yuv::{raster};
+use remotia::server::utils::bgr2yuv::raster;
 use rsmpeg::{avcodec::AVCodecContext, avutil::AVFrame};
 
 pub struct YUV420PAVFrameBuilder {
@@ -10,16 +10,14 @@ pub struct YUV420PAVFrameBuilder {
 
 impl YUV420PAVFrameBuilder {
     pub fn new() -> Self {
-        Self {
-            frame_count: 0,
-        }
+        Self { frame_count: 0 }
     }
 
     pub fn create_avframe(
         &mut self,
         encode_context: &mut AVCodecContext,
         frame_buffer: &[u8],
-        key_frame: bool
+        key_frame: bool,
     ) -> AVFrame {
         let mut avframe = AVFrame::new();
         avframe.set_format(encode_context.pix_fmt);
@@ -40,19 +38,16 @@ impl YUV420PAVFrameBuilder {
         let linesize_cb = linesize[1] as usize;
         let linesize_cr = linesize[2] as usize;
         let mut y_data = unsafe { std::slice::from_raw_parts_mut(data[0], height * linesize_y) };
-        let mut cb_data = unsafe { std::slice::from_raw_parts_mut(data[1], height / 2 * linesize_cb) };
-        let mut cr_data = unsafe { std::slice::from_raw_parts_mut(data[2], height / 2 * linesize_cr) };
+        let mut cb_data =
+            unsafe { std::slice::from_raw_parts_mut(data[1], height / 2 * linesize_cb) };
+        let mut cr_data =
+            unsafe { std::slice::from_raw_parts_mut(data[2], height / 2 * linesize_cr) };
 
         cb_data.fill(0);
         cr_data.fill(0);
 
         let start_time = Instant::now();
-        raster::bgra_to_yuv_separate(
-            frame_buffer,
-            &mut y_data,
-            &mut cb_data,
-            &mut cr_data,
-        );
+        raster::bgra_to_yuv_separate(frame_buffer, &mut y_data, &mut cb_data, &mut cr_data);
         debug!("Time: {}", start_time.elapsed().as_millis());
 
         debug!("Created avframe #{}", avframe.pts);
