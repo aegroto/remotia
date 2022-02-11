@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::{ffi::CString, ptr::NonNull};
+use std::{ffi::CString, ptr::NonNull, time::Instant};
 
 use log::{debug, info};
 use remotia::{
@@ -113,10 +113,15 @@ impl H264Encoder {
             .extract_writable_buffer("encoded_frame_buffer")
             .expect("No encoded frame buffer in frame DTO");
 
+        let avframe_building_start_time = Instant::now();
         let avframe = self.yuv420_avframe_builder.create_avframe(
             &mut self.encode_context,
             &input_buffer,
             key_frame,
+        );
+        frame_data.set(
+            "avframe_building_time",
+            avframe_building_start_time.elapsed().as_millis(),
         );
 
         let encoded_bytes = self.ffmpeg_encoding_bridge.encode_avframe(

@@ -90,6 +90,7 @@ async fn main() -> std::io::Result<()> {
                     ConsoleAverageStatsLogger::new()
                         .header("--- Computational times")
                         .log("encoded_size")
+                        .log("avframe_building_time")
                         .log("encoding_time")
                         .log("transmission_time")
                         .log("total_time"),
