@@ -1,7 +1,8 @@
 use remotia::{
     error::DropReason,
     processors::{
-        error_switch::OnErrorSwitch, frame_drop::threshold::ThresholdBasedFrameDropper, ticker::Ticker,
+        error_switch::OnErrorSwitch, frame_drop::threshold::ThresholdBasedFrameDropper,
+        ticker::Ticker,
     },
     server::pipeline::ascode::{component::Component, AscodePipeline},
 };
@@ -37,7 +38,7 @@ async fn main() -> std::io::Result<()> {
         .tag("ServerMain")
         .link(
             Component::new()
-                .add(Ticker::new(33))
+                .add(Ticker::new(30))
                 .add(TimestampAdder::new("process_start_timestamp"))
                 .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("capture_timestamp"))
@@ -53,7 +54,12 @@ async fn main() -> std::io::Result<()> {
                 .add(OnErrorSwitch::new(&error_handling_pipeline))
                 .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("encoding_start_timestamp"))
-                .add(H264Encoder::new(buffer_size, width as i32, height as i32))
+                .add(H264Encoder::new(
+                    buffer_size,
+                    width as i32,
+                    height as i32,
+                    "keyint=16",
+                ))
                 .add(TimestampDiffCalculator::new(
                     "encoding_start_timestamp",
                     "encoding_time",
@@ -67,7 +73,7 @@ async fn main() -> std::io::Result<()> {
                         .header("--- Computational times")
                         .log("encoded_size")
                         .log("avframe_building_time")
-                        .log("encoding_time")
+                        .log("encoding_time"),
                 )
                 .add(
                     ConsoleAverageStatsLogger::new()

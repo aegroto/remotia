@@ -1,6 +1,6 @@
 #![allow(dead_code)]
 
-use std::{ffi::CString, ptr::NonNull, time::Instant};
+use std::{ffi::{CString}, ptr::NonNull, time::Instant};
 
 use log::{debug, info};
 use remotia::{
@@ -48,6 +48,8 @@ pub struct H264Encoder {
     width: i32,
     height: i32,
 
+    x264opts: CString,
+
     state: H264EncoderState,
 
     yuv420_avframe_builder: YUV420PAVFrameBuilder,
@@ -59,10 +61,13 @@ pub struct H264Encoder {
 unsafe impl Send for H264Encoder {}
 
 impl H264Encoder {
-    pub fn new(frame_buffer_size: usize, width: i32, height: i32) -> Self {
+    pub fn new(frame_buffer_size: usize, width: i32, height: i32, x264opts: &str) -> Self {
+        let x264opts = CString::new(x264opts.to_string()).unwrap();
+        let encode_context = init_encoder(width, height, 21, &x264opts);
+
         H264Encoder {
-            width: width,
-            height: height,
+            width,
+            height,
 
             state: H264EncoderState {
                 network_stability: 0.5,
@@ -71,7 +76,8 @@ impl H264Encoder {
                 ..Default::default()
             },
 
-            encode_context: init_encoder(width, height, 21),
+            x264opts,
+            encode_context,
 
             yuv420_avframe_builder: YUV420PAVFrameBuilder::new(),
             ffmpeg_encoding_bridge: FFMpegEncodingBridge::new(frame_buffer_size),
@@ -89,7 +95,7 @@ impl H264Encoder {
         let crf = self.recalculate_crf(21, 20);
         info!("Reconfiguring encoder with CRF {}", crf);
 
-        self.encode_context = init_encoder(self.width, self.height, crf);
+        self.encode_context = init_encoder(self.width, self.height, crf, &self.x264opts);
         self.state.last_update_network_stability = self.state.network_stability
     }
 
@@ -139,7 +145,7 @@ impl H264Encoder {
     }
 }
 
-fn init_encoder(width: i32, height: i32, crf: u32) -> AVCodecContext {
+fn init_encoder(width: i32, height: i32, crf: u32, x264opts: &CString) -> AVCodecContext {
     let encoder = AVCodec::find_encoder_by_name(cstr!("libx264")).unwrap();
     let mut encode_context = AVCodecContext::new(&encoder);
     encode_context.set_width(width);
@@ -158,7 +164,7 @@ fn init_encoder(width: i32, height: i32, crf: u32) -> AVCodecContext {
     let options = AVDictionary::new(cstr!(""), cstr!(""), 0)
         .set(cstr!("preset"), cstr!("ultrafast"), 0)
         .set(cstr!("crf"), &crf_str, 0)
-        .set(cstr!("x264opts"), cstr!("keyint=16"), 0)
+        .set(cstr!("x264opts"), x264opts, 0)
         .set(cstr!("tune"), cstr!("zerolatency"), 0);
 
     encode_context.open(Some(options)).unwrap();

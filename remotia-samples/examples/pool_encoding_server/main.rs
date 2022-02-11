@@ -148,7 +148,7 @@ fn build_encoding_pipeline(
                 .add(OnErrorSwitch::new(error_handling_pipeline))
                 .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("encoding_start_timestamp"))
-                .add(H264Encoder::new(buffer_size, width as i32, height as i32))
+                .add(H264Encoder::new(buffer_size, width as i32, height as i32, ""))
                 .add(TimestampDiffCalculator::new(
                     "encoding_start_timestamp",
                     "encoding_time",
