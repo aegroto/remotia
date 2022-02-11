@@ -29,8 +29,8 @@ async fn main() -> std::io::Result<()> {
         .bind()
         .feedable();
 
-    let width = 1280;
-    let height = 720;
+    let width = 1920;
+    let height = 1080;
     let buffer_size = width * height * 4;
 
     // Pipeline structure

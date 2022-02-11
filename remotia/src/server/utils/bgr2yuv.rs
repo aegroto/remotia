@@ -95,8 +95,7 @@ pub mod raster {
                 bgra_pixels[i * 4 + 2],
             );
 
-            // let (y, u, v) = pixel::bgr_to_yuv(b, g, r);
-            let (y, u, v) = (r, g, b);
+            let (y, u, v) = pixel::bgr_to_yuv(b, g, r);
 
             y_pixels[i] = y;
             u_pixels[i / 4] += (u as f64 * 0.25) as u8;
