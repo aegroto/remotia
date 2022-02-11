@@ -1,12 +1,8 @@
 #![allow(dead_code)]
 
-use std::{ffi::{CString}, ptr::NonNull, time::Instant};
+use std::{ptr::NonNull, time::Instant};
 
-use log::{debug, info};
-use remotia::{
-    common::feedback::FeedbackMessage, server::encode::Encoder, traits::FrameProcessor,
-    types::FrameData,
-};
+use remotia::{traits::FrameProcessor, types::FrameData};
 use rsmpeg::{
     avcodec::{AVCodec, AVCodecContext},
     avutil::AVDictionary,
@@ -25,8 +21,6 @@ pub struct VP9Encoder {
     width: i32,
     height: i32,
 
-    x264opts: CString,
-
     yuv420_avframe_builder: YUV420PAVFrameBuilder,
     ffmpeg_encoding_bridge: FFMpegEncodingBridge,
 }
@@ -36,15 +30,13 @@ pub struct VP9Encoder {
 unsafe impl Send for VP9Encoder {}
 
 impl VP9Encoder {
-    pub fn new(frame_buffer_size: usize, width: i32, height: i32, x264opts: &str) -> Self {
-        let x264opts = CString::new(x264opts.to_string()).unwrap();
-        let encode_context = init_encoder(width, height, 21, &x264opts);
+    pub fn new(frame_buffer_size: usize, width: i32, height: i32) -> Self {
+        let encode_context = init_encoder(width, height);
 
         VP9Encoder {
             width,
             height,
 
-            x264opts,
             encode_context,
 
             yuv420_avframe_builder: YUV420PAVFrameBuilder::new(),
@@ -84,7 +76,7 @@ impl VP9Encoder {
     }
 }
 
-fn init_encoder(width: i32, height: i32, crf: u32, x264opts: &CString) -> AVCodecContext {
+fn init_encoder(width: i32, height: i32) -> AVCodecContext {
     let encoder = AVCodec::find_encoder_by_name(cstr!("libvpx-vp9")).unwrap();
     let mut encode_context = AVCodecContext::new(&encoder);
     encode_context.set_width(width);
@@ -99,7 +91,7 @@ fn init_encoder(width: i32, height: i32, crf: u32, x264opts: &CString) -> AVCode
 
     let options = AVDictionary::new(cstr!(""), cstr!(""), 0)
         .set(cstr!("quality"), cstr!("realtime"), 0)
-        .set(cstr!("g"), cstr!("1"), 0)
+        .set(cstr!("g"), cstr!("16"), 0)
         .set(cstr!("speed"), cstr!("6"), 0);
 
     encode_context.open(Some(options)).unwrap();

@@ -54,12 +54,7 @@ async fn main() -> std::io::Result<()> {
                 .add(OnErrorSwitch::new(&error_handling_pipeline))
                 .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("encoding_start_timestamp"))
-                .add(VP9Encoder::new(
-                    buffer_size,
-                    width as i32,
-                    height as i32,
-                    "",
-                ))
+                .add(VP9Encoder::new(buffer_size, width as i32, height as i32))
                 .add(TimestampDiffCalculator::new(
                     "encoding_start_timestamp",
                     "encoding_time",

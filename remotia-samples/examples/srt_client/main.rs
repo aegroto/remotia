@@ -31,8 +31,8 @@ async fn main() -> std::io::Result<()> {
         .bind()
         .feedable();
 
-    let width = 1920;
-    let height = 1080;
+    let width = 1280;
+    let height = 720;
     let buffer_size = width * height * 4;
 
     // Pipeline structure
@@ -74,7 +74,7 @@ async fn main() -> std::io::Result<()> {
                 ))
                 .add(OnErrorSwitch::new(&error_handling_pipeline))
                 .add(TimestampAdder::new("rendering_start_timestamp"))
-                // .add(BerylliumRenderer::new(width as u32, height as u32))
+                .add(BerylliumRenderer::new(width as u32, height as u32))
                 .add(TimestampDiffCalculator::new(
                     "rendering_start_timestamp",
                     "rendering_time",
