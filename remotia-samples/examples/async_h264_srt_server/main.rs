@@ -24,9 +24,9 @@ async fn main() -> std::io::Result<()> {
         .link(
             Component::new().add(
                 ConsoleDropReasonLogger::new()
-                    .log(DropReason::StaleFrame)
-                    .log(DropReason::ConnectionError)
-                    .log(DropReason::CodecError),
+                    // .log(DropReason::StaleFrame)
+                    // .log(DropReason::ConnectionError)
+                    // .log(DropReason::CodecError),
             ),
         )
         .bind()
@@ -66,9 +66,9 @@ async fn main() -> std::io::Result<()> {
                 ))
                 .add(
                     ConsoleAverageStatsLogger::new()
-                        .log("push_time")
-                        .log("push_mutex_lock_time")
-                        .log("send_frame_time")
+                        // .log("push_time")
+                        // .log("push_mutex_lock_time")
+                        // .log("send_frame_time")
                         .log("avframe_creation_time")
                 ),
         )
@@ -112,11 +112,11 @@ async fn main() -> std::io::Result<()> {
             Component::new()
                 .add(
                     ConsoleAverageStatsLogger::new()
-                        .header("--- Computational times")
-                        .log("encoded_size")
+                        // .header("--- Computational times")
+                        // .log("encoded_size")
                         // .log("push_time")
-                        .log("pull_time")
-                        .log("pull_mutex_lock_time")
+                        // .log("pull_time")
+                        // .log("pull_mutex_lock_time")
                         // .log("transmission_time")
                         // .log("total_time"),
                 ), /*.add(

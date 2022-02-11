@@ -84,7 +84,7 @@ impl AsyncH264EncoderFramePusher {
     pub fn new(encode_context: Arc<Mutex<AVCodecContext>>, width: i32, height: i32) -> Self {
         Self {
             encode_context,
-            yuv420_avframe_builder: YUV420PAVFrameBuilder::new(width as usize, height as usize),
+            yuv420_avframe_builder: YUV420PAVFrameBuilder::new(),
         }
     }
 }

@@ -1,4 +1,5 @@
 #![allow(unused_imports)]
+#![feature(portable_simd)]
 
 pub mod common;
 
