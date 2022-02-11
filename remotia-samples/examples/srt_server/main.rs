@@ -74,7 +74,7 @@ async fn main() -> std::io::Result<()> {
                 ))
                 .add(ThresholdBasedFrameDropper::new(
                     "pre_transmission_delay",
-                    50,
+                    200,
                 ))
                 .add(OnErrorSwitch::new(&error_handling_pipeline))
                 .add(TimestampAdder::new("transmission_start_timestamp"))
@@ -103,7 +103,8 @@ async fn main() -> std::io::Result<()> {
                 .add(
                     ConsoleAverageStatsLogger::new()
                         .header("--- Delay times")
-                        .log("capture_delay"),
+                        .log("capture_delay")
+                        .log("pre_transmission_delay"),
                 ),
         )
         .bind();

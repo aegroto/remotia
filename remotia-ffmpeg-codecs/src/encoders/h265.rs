@@ -48,7 +48,7 @@ pub struct H265Encoder {
     width: i32,
     height: i32,
 
-    x265opts: CString,
+    x265params: CString,
 
     state: H265EncoderState,
 
@@ -61,8 +61,8 @@ pub struct H265Encoder {
 unsafe impl Send for H265Encoder {}
 
 impl H265Encoder {
-    pub fn new(frame_buffer_size: usize, width: i32, height: i32, x265opts: &str) -> Self {
-        let x265opts = CString::new(x265opts.to_string()).unwrap();
+    pub fn new(frame_buffer_size: usize, width: i32, height: i32, x265params: &str) -> Self {
+        let x265opts = CString::new(x265params.to_string()).unwrap();
         let encode_context = init_encoder(width, height, 21, &x265opts);
 
         H265Encoder {
@@ -76,7 +76,7 @@ impl H265Encoder {
                 ..Default::default()
             },
 
-            x265opts,
+            x265params: x265opts,
             encode_context,
 
             yuv420_avframe_builder: YUV420PAVFrameBuilder::new(),
@@ -95,7 +95,7 @@ impl H265Encoder {
         let crf = self.recalculate_crf(21, 20);
         info!("Reconfiguring encoder with CRF {}", crf);
 
-        self.encode_context = init_encoder(self.width, self.height, crf, &self.x265opts);
+        self.encode_context = init_encoder(self.width, self.height, crf, &self.x265params);
         self.state.last_update_network_stability = self.state.network_stability
     }
 
@@ -142,7 +142,7 @@ impl H265Encoder {
     }
 }
 
-fn init_encoder(width: i32, height: i32, crf: u32, x265opts: &CString) -> AVCodecContext {
+fn init_encoder(width: i32, height: i32, crf: u32, x265params: &CString) -> AVCodecContext {
     let encoder = AVCodec::find_encoder_by_name(cstr!("libx265")).unwrap();
     let mut encode_context = AVCodecContext::new(&encoder);
     encode_context.set_width(width);
@@ -161,7 +161,7 @@ fn init_encoder(width: i32, height: i32, crf: u32, x265opts: &CString) -> AVCode
     let options = AVDictionary::new(cstr!(""), cstr!(""), 0)
         .set(cstr!("preset"), cstr!("ultrafast"), 0)
         .set(cstr!("crf"), &crf_str, 0)
-        .set(cstr!("x265opts"), x265opts, 0)
+        .set(cstr!("x265-params"), x265params, 0)
         .set(cstr!("tune"), cstr!("zerolatency"), 0);
 
     encode_context.open(Some(options)).unwrap();
