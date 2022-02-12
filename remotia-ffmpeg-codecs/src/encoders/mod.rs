@@ -4,11 +4,11 @@ use rsmpeg::{avcodec::AVCodecContext, avutil::AVFrame, error::RsmpegError};
 #[allow(dead_code)]
 mod frame_builders;
 
-pub mod asynchronous;
+// pub mod asynchronous;
 
 pub mod x264;
-pub mod x265;
-pub mod libvpx_vp9;
+// pub mod x265;
+// pub mod libvpx_vp9;
 
 pub struct FFMpegEncodingBridge { }
 

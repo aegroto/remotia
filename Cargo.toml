@@ -9,6 +9,7 @@ members = [
     "remotia-samples",
 
     "remotia-core-capturers",
+    "remotia-core-codecs",
     "remotia-core-renderers",
     "remotia-core-loggers",
 

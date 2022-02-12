@@ -1453,6 +1453,19 @@ dependencies = [
 ]
 
 [[package]]
+name = "remotia-core-codecs"
+version = "0.1.0"
+dependencies = [
+ "async-trait",
+ "bytes 1.1.0",
+ "env_logger 0.9.0",
+ "log",
+ "rayon",
+ "remotia",
+ "tokio 1.16.1",
+]
+
+[[package]]
 name = "remotia-core-loggers"
 version = "0.1.0"
 dependencies = [
@@ -1510,6 +1523,7 @@ dependencies = [
  "remotia",
  "remotia-buffer-utils",
  "remotia-core-capturers",
+ "remotia-core-codecs",
  "remotia-core-loggers",
  "remotia-core-renderers",
  "remotia-ffmpeg-codecs",

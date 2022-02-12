@@ -1,5 +1,4 @@
 use log::debug;
-use remotia::server::utils::bgr2yuv::raster;
 use rsmpeg::{avcodec::AVCodecContext, avutil::AVFrame};
 
 pub struct YUV420PAVFrameBuilder {
@@ -14,7 +13,9 @@ impl YUV420PAVFrameBuilder {
     pub fn create_avframe(
         &mut self,
         encode_context: &mut AVCodecContext,
-        frame_buffer: &[u8],
+        y_channel_buffer: &[u8],
+        cb_channel_buffer: &[u8],
+        cr_channel_buffer: &[u8],
         force_key_frame: bool,
     ) -> AVFrame {
         let mut avframe = AVFrame::new();
@@ -35,18 +36,18 @@ impl YUV420PAVFrameBuilder {
         let linesize_y = linesize[0] as usize;
         let linesize_cb = linesize[1] as usize;
         let linesize_cr = linesize[2] as usize;
-        let mut y_data = unsafe { std::slice::from_raw_parts_mut(data[0], height * linesize_y) };
-        let mut cb_data =
+        let y_data = unsafe { std::slice::from_raw_parts_mut(data[0], height * linesize_y) };
+        let cb_data =
             unsafe { std::slice::from_raw_parts_mut(data[1], height / 2 * linesize_cb) };
-        let mut cr_data =
+        let cr_data =
             unsafe { std::slice::from_raw_parts_mut(data[2], height / 2 * linesize_cr) };
 
-        cb_data.fill(0);
-        cr_data.fill(0);
+        y_data.copy_from_slice(y_channel_buffer);
+        cb_data.copy_from_slice(cb_channel_buffer);
+        cr_data.copy_from_slice(cr_channel_buffer);
 
-        raster::bgra_to_yuv_separate(frame_buffer, &mut y_data, &mut cb_data, &mut cr_data);
 
-        debug!("Y Slice: {:?}", &y_data);
+        // debug!("Y Slice: {:?}", &y_data);
 
         debug!("Created avframe #{}", avframe.pts);
 

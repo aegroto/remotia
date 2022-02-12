@@ -8,6 +8,7 @@ use remotia::{
 };
 use remotia_buffer_utils::BufferAllocator;
 use remotia_core_capturers::scrap::ScrapFrameCapturer;
+use remotia_core_codecs::yuv420p::encoder::RGBAToYUV420PConverter;
 use remotia_core_loggers::{errors::ConsoleDropReasonLogger, stats::ConsoleAverageStatsLogger, csv::serializer::CSVFrameDataSerializer};
 use remotia_ffmpeg_codecs::encoders::x264::X264Encoder;
 use remotia_profilation_utils::time::{add::TimestampAdder, diff::TimestampDiffCalculator};
@@ -52,8 +53,12 @@ async fn main() -> std::io::Result<()> {
                 ))
                 .add(ThresholdBasedFrameDropper::new("capture_delay", 10))
                 .add(OnErrorSwitch::new(&error_handling_pipeline))
-                .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("encoding_start_timestamp"))
+                .add(BufferAllocator::new("y_channel_buffer", width * height))
+                .add(BufferAllocator::new("cb_channel_buffer", width * height / 4))
+                .add(BufferAllocator::new("cr_channel_buffer", width * height / 4))
+                .add(RGBAToYUV420PConverter::new())
+                .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
                 .add(X264Encoder::new(
                     buffer_size,
                     width as i32,
