@@ -13,20 +13,20 @@ use remotia::{
 use super::{utils::yuv2bgr::raster};
 use async_trait::async_trait;
 
-pub struct H265Decoder {
+pub struct HEVCDecoder {
     decode_context: AVCodecContext,
 
     parser_context: AVCodecParserContext,
 }
 
 // TODO: Fix all those unsafe impl
-unsafe impl Send for H265Decoder {}
+unsafe impl Send for HEVCDecoder {}
 
-impl H265Decoder {
+impl HEVCDecoder {
     pub fn new() -> Self {
         let decoder = AVCodec::find_decoder_by_name(cstr!("hevc")).unwrap();
 
-        H265Decoder {
+        HEVCDecoder {
             decode_context: {
                 let mut decode_context = AVCodecContext::new(&decoder);
                 decode_context.open(None).unwrap();
@@ -123,7 +123,7 @@ impl H265Decoder {
 }
 
 #[async_trait]
-impl FrameProcessor for H265Decoder {
+impl FrameProcessor for HEVCDecoder {
     async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
         let mut encoded_frame_buffer = frame_data
             .extract_writable_buffer("encoded_frame_buffer")
@@ -153,7 +153,7 @@ impl FrameProcessor for H265Decoder {
 
 // retro-compatibility with silo pipeline
 #[async_trait]
-impl Decoder for H265Decoder {
+impl Decoder for HEVCDecoder {
     async fn decode(
         &mut self,
         input_buffer: &[u8],

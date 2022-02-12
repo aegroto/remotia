@@ -20,13 +20,13 @@ use cstr::cstr;
 use super::{frame_builders::yuv420p::YUV420PAVFrameBuilder, FFMpegEncodingBridge};
 
 #[derive(Default, Debug)]
-pub struct H265EncoderState {
+pub struct X264EncoderState {
     encoded_frames: usize,
     network_stability: f32,
     last_update_network_stability: f32,
 }
 
-impl H265EncoderState {
+impl X264EncoderState {
     pub fn increase_network_stability(&mut self, amount: f32) {
         self.network_stability = self.network_stability + amount;
         if self.network_stability > 1.0 {
@@ -42,15 +42,15 @@ impl H265EncoderState {
     }
 }
 
-pub struct H265Encoder {
+pub struct X264Encoder {
     encode_context: AVCodecContext,
 
     width: i32,
     height: i32,
 
-    x265params: CString,
+    x264opts: CString,
 
-    state: H265EncoderState,
+    state: X264EncoderState,
 
     yuv420_avframe_builder: YUV420PAVFrameBuilder,
     ffmpeg_encoding_bridge: FFMpegEncodingBridge,
@@ -58,25 +58,25 @@ pub struct H265Encoder {
 
 // TODO: Evaluate a safer way to move the encoder to another thread
 // Necessary for multi-threaded pipelines
-unsafe impl Send for H265Encoder {}
+unsafe impl Send for X264Encoder {}
 
-impl H265Encoder {
-    pub fn new(frame_buffer_size: usize, width: i32, height: i32, x265params: &str) -> Self {
-        let x265opts = CString::new(x265params.to_string()).unwrap();
-        let encode_context = init_encoder(width, height, 21, &x265opts);
+impl X264Encoder {
+    pub fn new(frame_buffer_size: usize, width: i32, height: i32, x264opts: &str) -> Self {
+        let x264opts = CString::new(x264opts.to_string()).unwrap();
+        let encode_context = init_encoder(width, height, 21, &x264opts);
 
-        H265Encoder {
+        X264Encoder {
             width,
             height,
 
-            state: H265EncoderState {
+            state: X264EncoderState {
                 network_stability: 0.5,
                 last_update_network_stability: 0.5,
 
                 ..Default::default()
             },
 
-            x265params: x265opts,
+            x264opts,
             encode_context,
 
             yuv420_avframe_builder: YUV420PAVFrameBuilder::new(),
@@ -95,7 +95,7 @@ impl H265Encoder {
         let crf = self.recalculate_crf(21, 20);
         info!("Reconfiguring encoder with CRF {}", crf);
 
-        self.encode_context = init_encoder(self.width, self.height, crf, &self.x265params);
+        self.encode_context = init_encoder(self.width, self.height, crf, &self.x264opts);
         self.state.last_update_network_stability = self.state.network_stability
     }
 
@@ -135,6 +135,8 @@ impl H265Encoder {
 
         self.state.encoded_frames += 1;
 
+        debug!("Start: {:?}", &input_buffer[0..16]);
+
         frame_data.insert_writable_buffer("raw_frame_buffer", input_buffer);
         frame_data.insert_writable_buffer("encoded_frame_buffer", output_buffer);
 
@@ -142,8 +144,8 @@ impl H265Encoder {
     }
 }
 
-fn init_encoder(width: i32, height: i32, crf: u32, x265params: &CString) -> AVCodecContext {
-    let encoder = AVCodec::find_encoder_by_name(cstr!("libx265")).unwrap();
+fn init_encoder(width: i32, height: i32, crf: u32, x264opts: &CString) -> AVCodecContext {
+    let encoder = AVCodec::find_encoder_by_name(cstr!("libx264")).unwrap();
     let mut encode_context = AVCodecContext::new(&encoder);
     encode_context.set_width(width);
     encode_context.set_height(height);
@@ -161,7 +163,7 @@ fn init_encoder(width: i32, height: i32, crf: u32, x265params: &CString) -> AVCo
     let options = AVDictionary::new(cstr!(""), cstr!(""), 0)
         .set(cstr!("preset"), cstr!("ultrafast"), 0)
         .set(cstr!("crf"), &crf_str, 0)
-        .set(cstr!("x265-params"), x265params, 0)
+        .set(cstr!("x264opts"), x264opts, 0)
         .set(cstr!("tune"), cstr!("zerolatency"), 0);
 
     encode_context.open(Some(options)).unwrap();
@@ -169,7 +171,7 @@ fn init_encoder(width: i32, height: i32, crf: u32, x265params: &CString) -> AVCo
 }
 
 #[async_trait]
-impl FrameProcessor for H265Encoder {
+impl FrameProcessor for X264Encoder {
     async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
         self.encode_on_frame_data(&mut frame_data);
         Some(frame_data)
@@ -178,7 +180,7 @@ impl FrameProcessor for H265Encoder {
 
 // retro-compatibility for silo pipeline
 #[async_trait]
-impl Encoder for H265Encoder {
+impl Encoder for X264Encoder {
     async fn encode(&mut self, frame_data: &mut FrameData) {
         self.perform_quality_increase();
         self.encode_on_frame_data(frame_data);

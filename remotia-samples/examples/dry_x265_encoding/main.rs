@@ -8,8 +8,8 @@ use remotia::{
 };
 use remotia_buffer_utils::BufferAllocator;
 use remotia_core_capturers::scrap::ScrapFrameCapturer;
-use remotia_core_loggers::{errors::ConsoleDropReasonLogger, stats::ConsoleAverageStatsLogger, csv::serializer::CSVFrameDataSerializer};
-use remotia_ffmpeg_codecs::encoders::h264::H264Encoder;
+use remotia_core_loggers::{errors::ConsoleDropReasonLogger, stats::ConsoleAverageStatsLogger};
+use remotia_ffmpeg_codecs::encoders::x265::X265Encoder;
 use remotia_profilation_utils::time::{add::TimestampAdder, diff::TimestampDiffCalculator};
 
 #[tokio::main]
@@ -54,7 +54,7 @@ async fn main() -> std::io::Result<()> {
                 .add(OnErrorSwitch::new(&error_handling_pipeline))
                 .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("encoding_start_timestamp"))
-                .add(H264Encoder::new(
+                .add(X265Encoder::new(
                     buffer_size,
                     width as i32,
                     height as i32,
@@ -79,13 +79,7 @@ async fn main() -> std::io::Result<()> {
                     ConsoleAverageStatsLogger::new()
                         .header("--- Delay times")
                         .log("capture_delay"),
-                )
-                .add(
-                    CSVFrameDataSerializer::new("dry_h264_encoding_logs.csv")
-                        .log("capture_timestamp")
-                        .log("encoding_time")
-                        .log("encoded_size")
-                )
+                ),
         )
         .bind();
 

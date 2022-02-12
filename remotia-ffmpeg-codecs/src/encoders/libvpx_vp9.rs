@@ -16,7 +16,7 @@ use cstr::cstr;
 
 use super::{frame_builders::yuv420p::YUV420PAVFrameBuilder, FFMpegEncodingBridge};
 
-pub struct VP9Encoder {
+pub struct LibVpxVP9Encoder {
     encode_context: AVCodecContext,
 
     width: i32,
@@ -28,13 +28,13 @@ pub struct VP9Encoder {
 
 // TODO: Evaluate a safer way to move the encoder to another thread
 // Necessary for multi-threaded pipelines
-unsafe impl Send for VP9Encoder {}
+unsafe impl Send for LibVpxVP9Encoder {}
 
-impl VP9Encoder {
+impl LibVpxVP9Encoder {
     pub fn new(frame_buffer_size: usize, width: i32, height: i32) -> Self {
         let encode_context = init_encoder(width, height);
 
-        VP9Encoder {
+        LibVpxVP9Encoder {
             width,
             height,
 
@@ -109,7 +109,7 @@ fn init_encoder(width: i32, height: i32) -> AVCodecContext {
 }
 
 #[async_trait]
-impl FrameProcessor for VP9Encoder {
+impl FrameProcessor for LibVpxVP9Encoder {
     async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
         self.encode_on_frame_data(&mut frame_data);
         Some(frame_data)

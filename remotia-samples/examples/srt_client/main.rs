@@ -8,7 +8,7 @@ use remotia::{
 use remotia_buffer_utils::BufferAllocator;
 use remotia_core_loggers::{errors::ConsoleDropReasonLogger, stats::ConsoleAverageStatsLogger};
 use remotia_core_renderers::beryllium::BerylliumRenderer;
-use remotia_ffmpeg_codecs::decoders::{h264::H264Decoder, vp9::VP9Decoder, h265::H265Decoder};
+use remotia_ffmpeg_codecs::decoders::{h264::H264Decoder, libvpx_vp9::LibVpxVP9Decoder, hevc::HEVCDecoder};
 use remotia_profilation_utils::time::{add::TimestampAdder, diff::TimestampDiffCalculator};
 use remotia_srt::receiver::SRTFrameReceiver;
 
@@ -55,7 +55,7 @@ async fn main() -> std::io::Result<()> {
                 .add(TimestampAdder::new("decoding_start_timestamp"))
                 // .add(H264Decoder::new())
                 // .add(H265Decoder::new())
-                .add(VP9Decoder::new())
+                .add(LibVpxVP9Decoder::new())
                 .add(TimestampDiffCalculator::new(
                     "decoding_start_timestamp",
                     "decoding_time",

@@ -9,7 +9,7 @@ use remotia::{
 use remotia_buffer_utils::BufferAllocator;
 use remotia_core_capturers::scrap::ScrapFrameCapturer;
 use remotia_core_loggers::{errors::ConsoleDropReasonLogger, stats::ConsoleAverageStatsLogger};
-use remotia_ffmpeg_codecs::encoders::vp9::VP9Encoder;
+use remotia_ffmpeg_codecs::encoders::libvpx_vp9::LibVpxVP9Encoder;
 use remotia_profilation_utils::time::{add::TimestampAdder, diff::TimestampDiffCalculator};
 
 #[tokio::main]
@@ -54,7 +54,7 @@ async fn main() -> std::io::Result<()> {
                 .add(OnErrorSwitch::new(&error_handling_pipeline))
                 .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("encoding_start_timestamp"))
-                .add(VP9Encoder::new(buffer_size, width as i32, height as i32))
+                .add(LibVpxVP9Encoder::new(buffer_size, width as i32, height as i32))
                 .add(TimestampDiffCalculator::new(
                     "encoding_start_timestamp",
                     "encoding_time",

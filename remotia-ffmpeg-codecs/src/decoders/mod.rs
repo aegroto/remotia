@@ -1,5 +1,5 @@
 pub mod h264;
-pub mod h265;
-pub mod vp9;
+pub mod hevc;
+pub mod libvpx_vp9;
 
 mod utils;

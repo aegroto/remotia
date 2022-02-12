@@ -14,20 +14,20 @@ use remotia::{
 use super::utils::yuv2bgr::raster;
 use async_trait::async_trait;
 
-pub struct VP9Decoder {
+pub struct LibVpxVP9Decoder {
     decode_context: AVCodecContext,
 
     parser_context: AVCodecParserContext,
 }
 
 // TODO: Fix all those unsafe impl
-unsafe impl Send for VP9Decoder {}
+unsafe impl Send for LibVpxVP9Decoder {}
 
-impl VP9Decoder {
+impl LibVpxVP9Decoder {
     pub fn new() -> Self {
         let decoder = AVCodec::find_decoder_by_name(cstr!("libvpx-vp9")).unwrap();
 
-        VP9Decoder {
+        LibVpxVP9Decoder {
             decode_context: {
                 let mut decode_context = AVCodecContext::new(&decoder);
                 decode_context.open(None).unwrap();
@@ -127,7 +127,7 @@ impl VP9Decoder {
 }
 
 #[async_trait]
-impl FrameProcessor for VP9Decoder {
+impl FrameProcessor for LibVpxVP9Decoder {
     async fn process(&mut self, mut frame_data: FrameData) -> Option<FrameData> {
         let mut encoded_frame_buffer = frame_data
             .extract_writable_buffer("encoded_frame_buffer")
@@ -165,7 +165,7 @@ impl FrameProcessor for VP9Decoder {
 
 // retro-compatibility with silo pipeline
 #[async_trait]
-impl Decoder for VP9Decoder {
+impl Decoder for LibVpxVP9Decoder {
     async fn decode(
         &mut self,
         input_buffer: &[u8],
