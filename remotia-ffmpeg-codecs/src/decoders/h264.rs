@@ -140,6 +140,8 @@ impl FrameProcessor for H264Decoder {
 
         encoded_frame_buffer.unsplit(empty_buffer_memory);
 
+        debug!("Start: {:?}", &raw_frame_buffer[0..16]);
+
         frame_data.insert_writable_buffer("encoded_frame_buffer", encoded_frame_buffer);
         frame_data.insert_writable_buffer("raw_frame_buffer", raw_frame_buffer);
 

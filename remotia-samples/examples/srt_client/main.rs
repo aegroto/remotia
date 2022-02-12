@@ -54,8 +54,8 @@ async fn main() -> std::io::Result<()> {
                 .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("decoding_start_timestamp"))
                 // .add(H264Decoder::new())
-                .add(H265Decoder::new())
-                // .add(VP9Decoder::new())
+                // .add(H265Decoder::new())
+                .add(VP9Decoder::new())
                 .add(TimestampDiffCalculator::new(
                     "decoding_start_timestamp",
                     "decoding_time",

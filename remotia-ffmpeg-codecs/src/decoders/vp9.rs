@@ -7,10 +7,11 @@ use rsmpeg::{
 use cstr::cstr;
 
 use remotia::{
-    common::feedback::FeedbackMessage, error::DropReason, traits::FrameProcessor, types::FrameData, client::decode::Decoder,
+    client::decode::Decoder, common::feedback::FeedbackMessage, error::DropReason,
+    traits::FrameProcessor, types::FrameData,
 };
 
-use super::{utils::yuv2bgr::raster};
+use super::utils::yuv2bgr::raster;
 use async_trait::async_trait;
 
 pub struct VP9Decoder {
@@ -63,6 +64,9 @@ impl VP9Decoder {
         let y_data = unsafe { std::slice::from_raw_parts_mut(data[0], height * linesize_y) };
         let cb_data = unsafe { std::slice::from_raw_parts_mut(data[1], height / 2 * linesize_cb) };
         let cr_data = unsafe { std::slice::from_raw_parts_mut(data[2], height / 2 * linesize_cr) };
+
+        debug!("Y Slice: {:?}", &y_data);
+
         self.decoded_yuv_to_bgra(y_data, cb_data, cr_data, output_buffer);
     }
 
@@ -136,9 +140,17 @@ impl FrameProcessor for VP9Decoder {
             .extract_writable_buffer("raw_frame_buffer")
             .unwrap();
 
+        debug!("[{}]", frame_data.get("capture_timestamp"));
+
         let decode_result = self.decode_to_buffer(&encoded_frame_buffer, &mut raw_frame_buffer);
 
         encoded_frame_buffer.unsplit(empty_buffer_memory);
+
+        /*debug!(
+            "[{}] Slice: {:?}",
+            frame_data.get("capture_timestamp"),
+            &raw_frame_buffer[0..64]
+        );*/
 
         frame_data.insert_writable_buffer("encoded_frame_buffer", encoded_frame_buffer);
         frame_data.insert_writable_buffer("raw_frame_buffer", raw_frame_buffer);

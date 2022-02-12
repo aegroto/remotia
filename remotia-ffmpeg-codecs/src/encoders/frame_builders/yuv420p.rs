@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use log::debug;
 use remotia::server::utils::bgr2yuv::raster;
 use rsmpeg::{avcodec::AVCodecContext, avutil::AVFrame};
@@ -46,9 +44,9 @@ impl YUV420PAVFrameBuilder {
         cb_data.fill(0);
         cr_data.fill(0);
 
-        let start_time = Instant::now();
         raster::bgra_to_yuv_separate(frame_buffer, &mut y_data, &mut cb_data, &mut cr_data);
-        debug!("Time: {}", start_time.elapsed().as_millis());
+
+        debug!("Y Slice: {:?}", &y_data);
 
         debug!("Created avframe #{}", avframe.pts);
 

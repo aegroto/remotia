@@ -2,6 +2,7 @@
 
 use std::{ptr::NonNull, time::Instant};
 
+use log::debug;
 use remotia::{traits::FrameProcessor, types::FrameData};
 use rsmpeg::{
     avcodec::{AVCodec, AVCodecContext},
@@ -52,6 +53,14 @@ impl VP9Encoder {
             .extract_writable_buffer("encoded_frame_buffer")
             .expect("No encoded frame buffer in frame DTO");
 
+        /*debug!(
+            "[{}] Slice: {:?}",
+            frame_data.get("capture_timestamp"),
+            &input_buffer[0..64]
+        );*/
+
+        debug!("[{}]", frame_data.get("capture_timestamp"));
+
         let avframe_building_start_time = Instant::now();
         let avframe = self.yuv420_avframe_builder.create_avframe(
             &mut self.encode_context,
@@ -91,7 +100,8 @@ fn init_encoder(width: i32, height: i32) -> AVCodecContext {
 
     let options = AVDictionary::new(cstr!(""), cstr!(""), 0)
         .set(cstr!("quality"), cstr!("realtime"), 0)
-        .set(cstr!("g"), cstr!("16"), 0)
+        .set(cstr!("g"), cstr!("1"), 0)
+        .set(cstr!("lossless"), cstr!("1"), 0)
         .set(cstr!("speed"), cstr!("6"), 0);
 
     encode_context.open(Some(options)).unwrap();

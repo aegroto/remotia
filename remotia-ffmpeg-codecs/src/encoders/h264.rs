@@ -138,6 +138,8 @@ impl H264Encoder {
 
         self.state.encoded_frames += 1;
 
+        debug!("Start: {:?}", &input_buffer[0..16]);
+
         frame_data.insert_writable_buffer("raw_frame_buffer", input_buffer);
         frame_data.insert_writable_buffer("encoded_frame_buffer", output_buffer);
 

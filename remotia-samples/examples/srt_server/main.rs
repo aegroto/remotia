@@ -41,7 +41,7 @@ async fn main() -> std::io::Result<()> {
         .tag("ServerMain")
         .link(
             Component::new()
-                .add(Ticker::new(33))
+                .add(Ticker::new(100))
                 .add(TimestampAdder::new("process_start_timestamp"))
                 .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("capture_timestamp"))
@@ -58,8 +58,8 @@ async fn main() -> std::io::Result<()> {
                 .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("encoding_start_timestamp"))
                 // .add(H264Encoder::new(buffer_size, width as i32, height as i32, "keyint=32"))
-                .add(H265Encoder::new(buffer_size, width as i32, height as i32, "keyint=1"))
-                // .add(VP9Encoder::new(buffer_size, width as i32, height as i32))
+                // .add(H265Encoder::new(buffer_size, width as i32, height as i32, "keyint=1"))
+                .add(VP9Encoder::new(buffer_size, width as i32, height as i32))
                 .add(TimestampDiffCalculator::new(
                     "encoding_start_timestamp",
                     "encoding_time",
