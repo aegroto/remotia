@@ -7,7 +7,7 @@ mod frame_builders;
 // pub mod asynchronous;
 
 pub mod x264;
-// pub mod x265;
+pub mod x265;
 // pub mod libvpx_vp9;
 
 pub struct FFMpegEncodingBridge { }
