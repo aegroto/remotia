@@ -2,7 +2,7 @@ use remotia::{
     error::DropReason,
     processors::{
         error_switch::OnErrorSwitch, frame_drop::threshold::ThresholdBasedFrameDropper,
-        pool_switch::PoolingSwitch, ticker::Ticker, switch::Switch,
+        pool_switch::PoolingSwitch, switch::Switch, ticker::Ticker,
     },
     server::pipeline::ascode::{component::Component, AscodePipeline},
 };
@@ -23,12 +23,18 @@ async fn main() -> std::io::Result<()> {
     let error_handling_pipeline = AscodePipeline::new()
         .tag("ErrorsHandler")
         .link(
-            Component::new().add(
-                ConsoleDropReasonLogger::new()
-                    .log(DropReason::StaleFrame)
-                    .log(DropReason::ConnectionError)
-                    .log(DropReason::CodecError),
-            ),
+            Component::new()
+                .add(
+                    ConsoleDropReasonLogger::new()
+                        .log(DropReason::StaleFrame)
+                        .log(DropReason::ConnectionError)
+                        .log(DropReason::CodecError),
+                )
+                .add(
+                    ConsoleAverageStatsLogger::new()
+                        .header("--- Dropped frames delay times")
+                        .log("capture_delay"),
+                ),
         )
         .bind()
         .feedable();
@@ -42,33 +48,6 @@ async fn main() -> std::io::Result<()> {
         .tag("Encoding")
         .link(
             Component::new()
-                .add(OnErrorSwitch::new(&error_handling_pipeline))
-
-                .add(TimestampDiffCalculator::new(
-                    "capture_timestamp",
-                    "capture_delay",
-                ))
-                // .add(ThresholdBasedFrameDropper::new("capture_delay", 10))
-
-                .add(TimestampAdder::new(
-                    "color_space_conversion_start_timestamp",
-                ))
-                .add(BufferAllocator::new("y_channel_buffer", width * height))
-                .add(BufferAllocator::new(
-                    "cb_channel_buffer",
-                    width * height / 4,
-                ))
-                .add(BufferAllocator::new(
-                    "cr_channel_buffer",
-                    width * height / 4,
-                ))
-                .add(RGBAToYUV420PConverter::new())
-
-                .add(TimestampDiffCalculator::new(
-                    "color_space_conversion_start_timestamp",
-                    "color_space_conversion_time",
-                ))
-
                 .add(TimestampAdder::new("encoding_start_timestamp"))
                 .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
                 .add(X264Encoder::new(
@@ -113,22 +92,29 @@ async fn main() -> std::io::Result<()> {
         .bind()
         .feedable();
 
-    /*let converters = 1;
+    let converters = 2;
     let mut conversion_switch = PoolingSwitch::new();
     let conversion_pipelines: Vec<AscodePipeline> = (0..converters)
-        .map(|_| build_color_conversion_pipeline(width, height, &encoding_pipeline))
+        .map(|_| {
+            build_color_conversion_pipeline(
+                width,
+                height,
+                &encoding_pipeline,
+                &error_handling_pipeline,
+            )
+        })
         .collect();
 
     for key in 0..converters {
         conversion_switch =
             conversion_switch.entry(key, conversion_pipelines.get(key as usize).unwrap());
-    }*/
+    }
 
     let capturing_pipeline = AscodePipeline::new()
         .tag("Capturing")
         .link(
             Component::new()
-                .add(Ticker::new(25))
+                .add(Ticker::new(20))
                 .add(TimestampAdder::new("process_start_timestamp"))
                 .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("capture_timestamp"))
@@ -137,17 +123,17 @@ async fn main() -> std::io::Result<()> {
                     "capture_timestamp",
                     "capture_time",
                 ))
-                // .add(conversion_switch)
-                .add(Switch::new(&encoding_pipeline))
+                .add(conversion_switch)
+                // .add(Switch::new(&encoding_pipeline)),
         )
         .bind();
 
     let mut handles = Vec::new();
     handles.extend(capturing_pipeline.run());
     handles.extend(encoding_pipeline.run());
-    /*for conversion_pipeline in conversion_pipelines {
+    for conversion_pipeline in conversion_pipelines {
         handles.extend(conversion_pipeline.run());
-    }*/
+    }
     handles.extend(error_handling_pipeline.run());
 
     for handle in handles {
@@ -157,10 +143,11 @@ async fn main() -> std::io::Result<()> {
     Ok(())
 }
 
-fn _build_color_conversion_pipeline(
+fn build_color_conversion_pipeline(
     width: usize,
     height: usize,
     encoding_pipeline: &AscodePipeline,
+    error_handling_pipeline: &AscodePipeline,
 ) -> AscodePipeline {
     AscodePipeline::new()
         .tag("ColorSpaceConversion")
@@ -171,6 +158,7 @@ fn _build_color_conversion_pipeline(
                     "capture_delay",
                 ))
                 .add(ThresholdBasedFrameDropper::new("capture_delay", 10))
+                .add(OnErrorSwitch::new(&error_handling_pipeline))
                 .add(TimestampAdder::new(
                     "color_space_conversion_start_timestamp",
                 ))

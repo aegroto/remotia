@@ -16,8 +16,6 @@ pub struct ConsoleAverageStatsLogger {
     current_round_start: Instant,
 
     logged_frames: Vec<FrameData>,
-
-    log_errors: bool,
 }
 
 impl Default for ConsoleAverageStatsLogger {
@@ -27,8 +25,7 @@ impl Default for ConsoleAverageStatsLogger {
             values_to_log: Vec::new(),
             round_duration: Duration::from_secs(1),
             current_round_start: Instant::now(),
-            logged_frames: Vec::new(),
-            log_errors: false,
+            logged_frames: Vec::new()
         }
     }
 }
@@ -82,10 +79,6 @@ impl ConsoleAverageStatsLogger {
     }
 
     fn log_frame_data(&mut self, frame_data: &FrameData) {
-        if !self.log_errors && frame_data.get_drop_reason().is_some() {
-            return;
-        }
-
         self.logged_frames.push(frame_data.clone_without_buffers());
 
         if self.current_round_start.elapsed().gt(&self.round_duration) {
