@@ -92,7 +92,7 @@ async fn main() -> std::io::Result<()> {
                 .add(
                     ConsoleAverageStatsLogger::new()
                         .header("--- Computational times")
-                        .log("encoded_size")
+                        .log("capture_time")
                         .log("color_space_conversion_time")
                         .log("encoding_time")
                         .log("total_time"),
@@ -105,6 +105,7 @@ async fn main() -> std::io::Result<()> {
                 .add(
                     CSVFrameDataSerializer::new("dry_h264_encoding_logs.csv")
                         .log("capture_timestamp")
+                        .log("capture_time")
                         .log("encoding_time")
                         .log("encoded_size"),
                 ),
@@ -132,6 +133,10 @@ async fn main() -> std::io::Result<()> {
                 .add(BufferAllocator::new("raw_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("capture_timestamp"))
                 .add(capturer)
+                .add(TimestampDiffCalculator::new(
+                    "capture_timestamp",
+                    "capture_time",
+                ))
                 // .add(conversion_switch)
                 .add(Switch::new(&encoding_pipeline))
         )
