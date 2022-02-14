@@ -46,9 +46,16 @@ impl LibVpxVP9Encoder {
     }
 
     fn encode_on_frame_data(&mut self, frame_data: &mut FrameData) {
-        let input_buffer = frame_data
-            .extract_writable_buffer("raw_frame_buffer")
-            .expect("No raw frame buffer in frame DTO");
+        let y_channel_buffer = frame_data
+            .extract_writable_buffer("y_channel_buffer")
+            .unwrap();
+        let cb_channel_buffer = frame_data
+            .extract_writable_buffer("cb_channel_buffer")
+            .unwrap();
+        let cr_channel_buffer = frame_data
+            .extract_writable_buffer("cr_channel_buffer")
+            .unwrap();
+
         let mut output_buffer = frame_data
             .extract_writable_buffer("encoded_frame_buffer")
             .expect("No encoded frame buffer in frame DTO");
@@ -64,7 +71,9 @@ impl LibVpxVP9Encoder {
         let avframe_building_start_time = Instant::now();
         let avframe = self.yuv420_avframe_builder.create_avframe(
             &mut self.encode_context,
-            &input_buffer,
+            &y_channel_buffer,
+            &cb_channel_buffer,
+            &cr_channel_buffer,
             false,
         );
         frame_data.set(
@@ -78,7 +87,10 @@ impl LibVpxVP9Encoder {
             &mut output_buffer,
         );
 
-        frame_data.insert_writable_buffer("raw_frame_buffer", input_buffer);
+        frame_data.insert_writable_buffer("y_channel_buffer", y_channel_buffer);
+        frame_data.insert_writable_buffer("cb_channel_buffer", cb_channel_buffer);
+        frame_data.insert_writable_buffer("cr_channel_buffer", cr_channel_buffer);
+
         frame_data.insert_writable_buffer("encoded_frame_buffer", output_buffer);
 
         frame_data.set("encoded_size", encoded_bytes as u128);
