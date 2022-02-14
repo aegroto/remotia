@@ -10,6 +10,7 @@ use remotia::{
 };
 use remotia_buffer_utils::BufferAllocator;
 use remotia_core_capturers::scrap::ScrapFrameCapturer;
+use remotia_core_codecs::yuv420p::encoder::RGBAToYUV420PConverter;
 use remotia_core_loggers::{errors::ConsoleDropReasonLogger, stats::ConsoleAverageStatsLogger};
 use remotia_ffmpeg_codecs::encoders::{x264::X264Encoder, libvpx_vp9::LibVpxVP9Encoder, x265::X265Encoder};
 use remotia_profilation_utils::time::{add::TimestampAdder, diff::TimestampDiffCalculator};
@@ -55,11 +56,30 @@ async fn main() -> std::io::Result<()> {
                 ))
                 .add(ThresholdBasedFrameDropper::new("capture_delay", 10))
                 .add(OnErrorSwitch::new(&error_handling_pipeline))
+
+                .add(TimestampAdder::new(
+                    "color_space_conversion_start_timestamp",
+                ))
+                .add(BufferAllocator::new("y_channel_buffer", width * height))
+                .add(BufferAllocator::new(
+                    "cb_channel_buffer",
+                    width * height / 4,
+                ))
+                .add(BufferAllocator::new(
+                    "cr_channel_buffer",
+                    width * height / 4,
+                ))
+                .add(RGBAToYUV420PConverter::new())
+
                 .add(BufferAllocator::new("encoded_frame_buffer", buffer_size))
                 .add(TimestampAdder::new("encoding_start_timestamp"))
-                // .add(H264Encoder::new(buffer_size, width as i32, height as i32, "keyint=32"))
-                // .add(H265Encoder::new(buffer_size, width as i32, height as i32, "keyint=1"))
-                .add(LibVpxVP9Encoder::new(buffer_size, width as i32, height as i32))
+                .add(X264Encoder::new(
+                    buffer_size,
+                    width as i32,
+                    height as i32,
+                    "keyint=16",
+                ))
+                // .add(LibVpxVP9Encoder::new(buffer_size, width as i32, height as i32))
                 .add(TimestampDiffCalculator::new(
                     "encoding_start_timestamp",
                     "encoding_time",
