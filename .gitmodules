@@ -1,21 +1,21 @@
 [submodule "remotia-core"]
 	path = remotia-core
-	url = git@github.com:remotia/remotia-core.git
+	url = https://github.com/remotia/remotia-core/remotia-core.git
 [submodule "remotia-buffer-utils"]
 	path = remotia-buffer-utils
-	url = git@github.com:remotia/remotia-buffer-utils.git
+	url = https://github.com/remotia/remotia-buffer-utils.git
 [submodule "remotia-core-capturers"]
 	path = remotia-core-capturers
-	url = git@github.com:remotia/remotia-core-capturers.git
+	url = https://github.com/remotia/remotia-core-capturers.git
 [submodule "remotia-core-codecs"]
 	path = remotia-core-codecs
-	url = git@github.com:remotia/remotia-core-codecs.git
+	url = https://github.com/remotia/remotia-core-codecs.git
 [submodule "remotia-core-loggers"]
 	path = remotia-core-loggers
-	url = git@github.com:remotia/remotia-core-loggers.git
+	url = https://github.com/remotia/remotia-core-loggers.git
 [submodule "remotia-core-renderers"]
 	path = remotia-core-renderers
-	url = git@github.com:remotia/remotia-core-renderers.git
+	url = https://github.com/remotia/remotia-core-renderers.git
 [submodule "remotia-profilation-utils"]
 	path = remotia-profilation-utils
-	url = git@github.com:remotia/remotia-profilation-utils.git
+	url = https://github.com/remotia/remotia-profilation-utils.git
