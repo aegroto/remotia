@@ -1,0 +1,3 @@
+[submodule "remotia-core"]
+	path = remotia-core
+	url = git@github.com:remotia/remotia-core.git
