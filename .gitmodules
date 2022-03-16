@@ -1,6 +1,6 @@
 [submodule "remotia-core"]
 	path = remotia-core
-	url = https://github.com/remotia/remotia-core/remotia-core.git
+	url = https://github.com/remotia/remotia-core.git
 [submodule "remotia-buffer-utils"]
 	path = remotia-buffer-utils
 	url = https://github.com/remotia/remotia-buffer-utils.git
